@@ -1,0 +1,858 @@
+"""CorMap class implementing analyis of results from the ATSAS suite program
+DATCMP.
+"""
+import glob
+import subprocess
+import re
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import pandas as pd
+import seaborn as sns
+
+
+class ScatterAnalysis(object):
+    """CorMap class implementing analysis of data output from a run of the
+    ATSAS suite program DATCMP
+    """
+    # ----------------------------------------------------------------------- #
+    #                         CLASS VARIABLES                                 #
+    # ----------------------------------------------------------------------- #
+    PLOT_LABEL = {'family': 'serif',
+                  'weight': 'normal',
+                  'size': 16}
+    mpl.rc('font', family='serif', weight='normal', size=12)
+
+    PLOT_NUM = 0
+
+    # ----------------------------------------------------------------------- #
+    #                         CONSTRUCTOR METHOD                              #
+    # ----------------------------------------------------------------------- #
+    def __init__(self, scat_curve_location, x_axis_vec=[], x_metric="",
+                 x_units=""):
+        # Go through files and extract the frame data.
+        file_list = glob.glob(scat_curve_location)
+        num_frames = len(file_list)
+        self.q = np.loadtxt(file_list[0])[:, 0]
+        self.I = np.zeros([len(self.q), num_frames])
+        for i, file in enumerate(file_list):
+            frame_data = np.loadtxt(file)
+            self.I[:, i] = frame_data[:, 1]
+
+        # Run DATCMP to get pairwise comparison information.
+        self.datcmp_data = self.get_datcmp_info(scat_curve_location)
+
+        # Organise the x-axis used for the plots. Default will be the frame
+        # number.
+        if not isinstance(x_axis_vec, list):
+            if len(x_axis_vec) == num_frames:
+                self.x_axis = x_axis_vec
+            else:
+                print "x_axis_vec is not the same length as the number of"
+                print "frames. Using frame numbers instead."
+                self.x_axis = np.linspace(1, num_frames, num_frames)
+        else:
+            self.x_axis = np.linspace(1, num_frames, num_frames)
+
+        if x_metric and x_units:
+            self.x_metric = x_metric
+            self.x_units = x_units
+        else:
+            self.x_metric = "Frame number"
+            self.x_units = ""
+
+    # ----------------------------------------------------------------------- #
+    #                         INSTANCE METHODS                                #
+    # ----------------------------------------------------------------------- #
+
+    def get_datcmp_info(self, scattering_curve_files):
+        """Method to extract the data produced by from DATCMP
+        """
+        cmd = "datcmp {}".format(scattering_curve_files)
+        log = run_system_command(cmd)
+        # define a dictionary to store the data produced from DATCMP - this
+        # value will be overwritten.
+        data_dict = {"1,2": 0}
+        for line in iter(log.splitlines()):
+            match_obj = re.match(r'\s* \d{1,} vs', line)
+            if match_obj:
+                data = line.split()
+                if "*" in data[5]:
+                    data[5] = data[5][:-1]
+                data_dict["{},{}".format(data[0], data[2])] = [int(float(data[3])),
+                                                               float(data[4]),
+                                                               float(data[5])]
+        return data_dict
+
+    def find_diff_frames(self, frame=1, P_threshold=0.01, P_type="adjP"):
+        """List all statistically different frames according to the method by
+        Daniel Franke, Cy M Jeffries & Dmitri I Svergun (2015)
+        """
+        if P_type == "adjP":
+            p_col = 2
+        elif P_type == "P":
+            p_col = 1
+        else:
+            print "********************** ERROR ***************************"
+            print "P_type '{}' Is not recognised".format(P_type)
+            print "P_type can only take the values 'adjP' (default) or 'P'."
+        if frame <= self.I.shape[1]:
+            diff_frames = []
+            for i in xrange(0, self.I.shape[1]):
+                if i+1 < frame:
+                    key = "{},{}".format(i+1, frame)
+                elif i+1 > frame:
+                    key = "{},{}".format(frame, i+1)
+                else:
+                    continue
+                adjP = self.datcmp_data[key][p_col]
+                if adjP < P_threshold:
+                    diff_frames.append(i+1)
+            return diff_frames
+        else:
+            print "********************** ERROR ***************************"
+            print "FRAME '{}' DOES NOT EXIST".format(frame)
+            print "Use different frame numbers between 1 and {}".format(self.I.shape[1])
+
+    def find_first_n_diff_frames(self, n=1, frame=1, P_threshold=0.01,
+                                 P_type="adjP"):
+        """Return the first frame, F, where there are n consecutive frames
+        after F that are also statistically different from the chosen frame.
+        """
+        # Get list frames that are different
+        list_of_diff_frames = self.find_diff_frames(frame, P_threshold, P_type)
+        if n == 1:
+            # If only looking for one frame then return the first value in
+            # list of different frames.
+            return list_of_diff_frames[0]
+        elif n > 1:
+            # If we're looking for more than one consecutive frame then we need
+            # to keep track of the number of consecutive frames that we've
+            # iterated through.
+            consec_count = 0
+            max_consec_count = 0
+            fr_max_count = 0
+            for i, curr_fr in enumerate(list_of_diff_frames):
+                if i == 0:
+                    prev_fr = curr_fr
+                    consec_count = 1
+                else:
+                    if curr_fr == prev_fr + 1:
+                        consec_count += 1
+                    else:
+                        consec_count = 1
+                prev_fr = curr_fr
+                if consec_count == n:
+                    return curr_fr - n + 1
+                if consec_count > max_consec_count:
+                    max_consec_count = consec_count
+                    fr_max_count = curr_fr - max_consec_count + 1
+            print "************************ WARNING **************************"
+            print "{} consecutive frames not reached!".format(n)
+            print "The max number of consecutive frames was {}".format(max_consec_count)
+            print "The initial frame for that run was frame {}.".format(fr_max_count)
+        else:
+            print "********************** ERROR ***************************"
+            print "n MUST BE A POSITVE INTEGER VALUE"
+            print "User chose n = {}.".format(n)
+            print "Please choose a positve integer value for n."
+
+    def similar_frames(self, frame=1, P_threshold=0.01, P_type="adjP"):
+        """Return list all of the frames that are similar as defined by the
+        method presented in Daniel Franke, Cy M Jeffries & Dmitri I Svergun
+        (2015).
+        """
+        list_of_diff_frames = self.find_diff_frames(frame, P_threshold, P_type)
+        return [i+1 for i in xrange(0, self.I.shape[1]) if i+1 not in list_of_diff_frames]
+
+    def get_pw_data(self, frame1, frame2, datcmp_data_type="adj P(>C)"):
+        """Return C, P(>C) or Bonferroni adjusted P(>C) value from the
+        DATCMP output.
+
+        frame1: integer number of the 1st frame used for the pairwise analyis
+
+        frame1: integer number of the 2nd frame used for the pairwise analyis
+
+        datcmp_data_type: string specifying the pairwise result to be returned.
+        The input options are:
+        1) 'C' - This will return the C value i.e. the max observed patch of
+        continuous runs of -1 or 1
+        2) 'P(>C)' - This will return the P value of observing a patch of
+        continuous runs of -1 or 1 bigger than the corresponding C value.
+        3) 'adj P(>C)' - This will return the Bonferroni adjusted P value of
+        observing a patch of continuous runs of -1 or 1 bigger than the
+        corresponding C value.
+        """
+        if datcmp_data_type == "C" or datcmp_data_type == 0:
+            dat_type = 0
+        elif datcmp_data_type == "P(>C)":
+            dat_type = 1
+        elif datcmp_data_type == "adj P(>C)":
+            dat_type = 2
+        else:
+            print "********************** ERROR ***************************"
+            print "INVALID DATCMP DATA TYPE CHOSEN: '{}' DOES NOT EXIST".format(datcmp_data_type)
+            print "Please choose either 'C', 'P(>C)' or 'adj P(>C)'."
+
+        if frame1 < frame2:
+            datcmp_key = "{},{}".format(frame1, frame2)
+        elif frame2 < frame1:
+            datcmp_key = "{},{}".format(frame2, frame1)
+
+        if datcmp_key in self.datcmp_data:
+            return self.datcmp_data[datcmp_key][dat_type]
+        else:
+            print "********************** ERROR ***************************"
+            print "KEY '{}' DOES NOT EXIST".format(datcmp_key)
+            print "Use different frame numbers between 1 and {}".format(self.I.shape[1])
+
+    def calc_cormap(self):
+        """Return CorMap matrix i.e. the (Pearson product-moment) correlation
+        matrix.
+        """
+        return np.corrcoef(self.I)
+
+    def calc_pwcormap(self, frame1, frame2):
+        """Return the pairwise correlation matrix between frame 1 and frame 2
+        """
+        pw_I = np.column_stack([self.I[:, frame1-1], self.I[:, frame2-1]])
+        return np.corrcoef(pw_I)
+
+    def get_pw_data_array(self, frame=0, delete_zero_row=True):
+        """Return an array of all C, P(>C) or Bonferroni adjusted P(>C) values
+        from the DATCMP output for the requested frame.
+        """
+        if frame == 0:
+            pw_data = np.zeros([len(self.datcmp_data), 3])
+            for i, values in enumerate(self.datcmp_data.itervalues()):
+                pw_data[i, :] = np.asarray(values)
+        elif 1 <= frame <= self.I.shape[1]:
+            pw_data = np.zeros([self.I.shape[1], 3])
+            for i in xrange(0, self.I.shape[1]):
+                if i+1 < frame:
+                    key = "{},{}".format(i+1, frame)
+                elif i+1 > frame:
+                    key = "{},{}".format(frame, i+1)
+                else:
+                    continue
+                pw_data[i, :] = np.asarray(self.datcmp_data[key])
+        else:
+            print "********************** ERROR ***************************"
+            print "FRAME '{}' DOES NOT EXIST".format(frame)
+            print "Use a frame number between 1 and {}".format(self.I.shape[1])
+
+        if delete_zero_row and frame > 0:
+            return np.delete(pw_data, (frame-1), axis=0)
+        else:
+            return pw_data
+
+
+# ----------------------------------------------------------------------- #
+#                        PLOT THE CORRELATION MAP                         #
+# ----------------------------------------------------------------------- #
+    def plot_cormap(self, colour_scheme="gray", display=True, save=False,
+                    filename="", directory=""):
+        """Create a CorMap (correlation map) plot
+        """
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          SET PLOT PARAMS                        #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        min_q = min(self.q)
+        max_q = max(self.q)
+        self.PLOT_NUM += 1
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          PLOT CORMAP                            #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        plt.figure(self.PLOT_NUM)
+        plt.gca().xaxis.grid(False)
+        plt.gca().yaxis.grid(False)
+        cormap = plt.imshow(self.calc_cormap(), cmap=colour_scheme,
+                            extent=[min_q, max_q, min_q, max_q])
+        plt.xlabel(r'Scattering Vector, q (nm$^{-1}$)',
+                   fontdict=self.PLOT_LABEL)
+        plt.ylabel(r'Scattering Vector, q (nm$^{-1}$)',
+                   fontdict=self.PLOT_LABEL)
+        plt.colorbar(cormap)
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                       SAVE AND/OR DISPLAY                       #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if save and filename:
+            if directory:
+                plot_path = "{}/{}".format(directory, filename)
+            else:
+                plot_path = filename
+            plt.savefig(plot_path)
+        elif save and not filename:
+            print "********************** ERROR ***************************"
+            print "COULD NOT SAVE PLOT"
+            print "No filename specified. Please specify a filename if you"
+            print "would like to save the plot."
+        if display:
+            plt.show()
+
+# ----------------------------------------------------------------------- #
+#                    PLOT THE PAIRWISE CORRELATION MAP                    #
+# ----------------------------------------------------------------------- #
+    def plot_pwcormap(self, fr1, fr2, colour_scheme="gray", display=True,
+                      save=False, filename="", directory=""):
+        """Create a pairwise CorMap plot.
+        """
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          SET PLOT PARAMS                        #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        min_q = min(self.q)
+        max_q = max(self.q)
+        self.PLOT_NUM += 1
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                     PLOT PAIRWISE CORMAP                        #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        fig = plt.figure(self.PLOT_NUM)
+        plt.gca().xaxis.grid(False)
+        plt.gca().yaxis.grid(False)
+        cormap = plt.imshow(self.calc_pwcormap(frame1=fr1, frame2=fr2),
+                            cmap=colour_scheme,
+                            extent=[min_q, max_q, min_q, max_q])
+        plt.xlabel(r'Scattering Vector, q (nm$^{-1}$)',
+                   fontdict=self.PLOT_LABEL)
+        plt.ylabel(r'Scattering Vector, q (nm$^{-1}$)',
+                   fontdict=self.PLOT_LABEL)
+        plt.colorbar(cormap)
+        adjP = self.get_pw_data(fr1, fr2, "adj P(>C)")
+        C = self.get_pw_data(fr1, fr2, "C")
+        if self.x_units:
+            change_in_x = abs(self.x_axis[fr1-1] - self.x_axis[fr2-1])
+            plt.title(r'PW CorMap: frame {} vs {}.C = {}, adj P(>C) = {}, $\Delta${} = {:.2f} {}'.format(fr1, fr2, C, adjP, self.x_metric, change_in_x, self.x_units), ha='center')
+        else:
+            plt.title(r'Pairwise CorMap: frame {} vs {}. C = {}, adj P(>C) = {}'.format(fr1, fr2, C, adjP), ha='center')
+
+        fig.canvas.mpl_connect('draw_event', on_draw)
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                       SAVE AND/OR DISPLAY                       #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if save and filename:
+            if directory:
+                plot_path = "{}/{}".format(directory, filename)
+            else:
+                plot_path = filename
+            plt.savefig(plot_path)
+        elif save and not filename:
+            print "********************** ERROR ***************************"
+            print "COULD NOT SAVE PLOT"
+            print "No filename specified. Please specify a filename if you"
+            print "would like to save the plot."
+        if display:
+            plt.show()
+
+    # ----------------------------------------------------------------------- #
+    #                  PLOT THE HISTOGRAM OF PAIRWISE DATA                    #
+    # ----------------------------------------------------------------------- #
+    def plot_histogram(self, frame=0, datcmp_data_type="C",
+                       display=True, save=False, filename="",
+                       directory="", num_bins=20):
+        """Plot histogram of pairwise correlation data
+        """
+        if datcmp_data_type == "C" or datcmp_data_type == 0:
+            dat_type = 0
+        elif datcmp_data_type == "P(>C)":
+            dat_type = 1
+        elif datcmp_data_type == "adj P(>C)":
+            dat_type = 2
+        else:
+            print "********************** ERROR ***************************"
+            print "INVALID DATCMP DATA TYPE CHOSEN: '{}' DOES NOT EXIST".format(datcmp_data_type)
+            print "Please choose either 'C', 'P(>C)' or 'adj P(>C)'."
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          SET PLOT PARAMS                        #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        self.PLOT_NUM += 1
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          PLOT HISTOGRAM                         #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        plt.figure(self.PLOT_NUM)
+        plt.hist(self.get_pw_data_array(frame)[:, dat_type], bins=num_bins)
+        plt.xlabel("{}".format(datcmp_data_type), fontdict=self.PLOT_LABEL)
+        plt.ylabel(r'Frequency', fontdict=self.PLOT_LABEL)
+        if frame == 0:
+            plt.title("{} values for all pairwise comparisons".format(datcmp_data_type))
+        else:
+            plt.title("{} values for all pairwise comparisons with frame {}".format(datcmp_data_type, frame))
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                       SAVE AND/OR DISPLAY                       #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if save and filename:
+            if directory:
+                plot_path = "{}/{}".format(directory, filename)
+            else:
+                plot_path = filename
+            plt.savefig(plot_path)
+        elif save and not filename:
+            print "********************** ERROR ***************************"
+            print "COULD NOT SAVE PLOT"
+            print "No filename specified. Please specify a filename if you"
+            print "would like to save the plot."
+        if display:
+            plt.show()
+
+    # ----------------------------------------------------------------------- #
+    #                    SCATTER PLOT OF PAIRWISE DATA                        #
+    # ----------------------------------------------------------------------- #
+    def plot_scatter(self, frame=1, P_threshold=0.01, markersize=60,
+                     display=True, save=False, filename="", directory="",
+                     legend_loc="upper left", x_change=False, use_adjP=True,
+                     xaxis_frame_num=False,
+                     colours=["#0072B2", "#009E73", "#D55E00"],
+                     markers=["o", "o", "o"]):
+        """Scatter plot of the C values for a chosen frame against all other
+        frames.
+        """
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          SET PLOT PARAMS                        #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        self.PLOT_NUM += 1
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          SCATTER PLOT                           #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        pwframe_data = self.get_pw_data_array(frame=frame,
+                                              delete_zero_row=False)
+
+        if xaxis_frame_num:
+            x_axis = np.linspace(1, self.I.shape[1], self.I.shape[1])
+        else:
+            x_axis = self.x_axis
+
+        if x_change:
+            sub = x_axis[frame - 1]
+            pwframe_data = np.column_stack([abs(x_axis - sub), pwframe_data])
+        else:
+            pwframe_data = np.column_stack([x_axis, pwframe_data])
+        pwframe_data = np.delete(pwframe_data, (frame-1), axis=0)
+
+        if use_adjP:
+            lb_dict = {0: [colours[0], "P(>C) = 1"],
+                       1: [colours[1], "{} <= P(>C) < 1".format(P_threshold)],
+                       2: [colours[2], "P(>C) < {}".format(P_threshold)]}
+            P_col = 3
+        else:
+            lb_dict = {0: [colours[0], "P(>C) == 1"],
+                       1: [colours[1], "{} <= P(>C) < 1".format(P_threshold)],
+                       2: [colours[2], "P(>C) < {}".format(P_threshold)]}
+            P_col = 2
+
+        plt.figure(self.PLOT_NUM)
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twiny()
+        ax1.set_xlim([-10,70])
+        ax1.set_xlabel("Dose (kGy)", fontdict=self.PLOT_LABEL)
+        good_points = pwframe_data[pwframe_data[:, P_col] == 1]
+        ax2.scatter(good_points[:, 0], good_points[:, 1], color=lb_dict[0][0],
+                    s=markersize, edgecolors='#ffffff', alpha=1,
+                    marker=markers[0], label=lb_dict[0][1])
+
+        ok_points = pwframe_data[1 > pwframe_data[:, P_col]]
+        ok_points = ok_points[ok_points[:, P_col] >= P_threshold]
+        ax2.scatter(ok_points[:, 0], ok_points[:, 1], color=lb_dict[1][0],
+                    s=markersize, edgecolors='#ffffff', alpha=1,
+                    marker=markers[1], label=lb_dict[1][1])
+
+        bad_points = pwframe_data[pwframe_data[:, P_col] < P_threshold]
+        ax2.scatter(bad_points[:, 0], bad_points[:, 1], color=lb_dict[2][0],
+                    s=markersize, edgecolors='#ffffff', alpha=1,
+                    marker=markers[2], label=lb_dict[2][1])
+
+        ax2.legend(loc=legend_loc, scatterpoints=1)
+        if x_change:
+            if xaxis_frame_num:
+                ax2.set_xlabel(r'$\Delta${}'.format("Frame Number"),
+                               fontdict=self.PLOT_LABEL)
+            elif self.x_units:
+                ax2.set_xlabel(r'$\Delta${} ({})'.format(self.x_metric, self.x_units),
+                               fontdict=self.PLOT_LABEL)
+            else:
+                ax2.set_xlabel(r'$\Delta${}'.format(self.x_metric),
+                               fontdict=self.PLOT_LABEL)
+        else:
+            if xaxis_frame_num:
+                ax2.set_xlabel("Frame Number", fontdict=self.PLOT_LABEL)
+            elif self.x_units:
+                ax2.set_xlabel("{} ({})".format(self.x_metric, self.x_units),
+                               fontdict=self.PLOT_LABEL)
+            else:
+                ax2.set_xlabel("{}".format(self.x_metric),
+                               fontdict=self.PLOT_LABEL)
+        ax2.set_ylabel(r'C', fontdict=self.PLOT_LABEL)
+        # if xaxis_frame_num:
+        #     ax1.set_title("C values against frame number for frame {}".format(frame))
+        # else:
+        #     ax1.set_title("C values against {} for frame {}".format(self.x_metric,
+        #                                                         frame))
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                       SAVE AND/OR DISPLAY                       #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if save and filename:
+            if directory:
+                plot_path = "{}/{}".format(directory, filename)
+            else:
+                plot_path = filename
+            plt.savefig(plot_path)
+        elif save and not filename:
+            print "********************** ERROR ***************************"
+            print "COULD NOT SAVE PLOT"
+            print "No filename specified. Please specify a filename if you"
+            print "would like to save the plot."
+        if display:
+            plt.show()
+
+    # ----------------------------------------------------------------------- #
+    #                           P(>C) HEAT MAP                                #
+    # ----------------------------------------------------------------------- #
+    def plot_heatmap(self, P_threshold=0.01, markersize=60,
+                     display=True, save=False, filename="", directory="",
+                     legend_loc=2, x_change=False, use_adjP=True,
+                     xaxis_frame_num=False, P_values=True,
+                     colours=["#0072B2", "#009E73", "#D55E00"]):
+        """Heatmap plot of the P(>C) values for all frames against all other
+        frames.
+        """
+        full_data = []
+        num_frames = self.I.shape[1]
+        for frame in range(1, num_frames+1):
+            pwframe_data = self.get_pw_data_array(frame=frame,
+                                                  delete_zero_row=False)
+
+            if xaxis_frame_num:
+                x_axis = np.linspace(1, self.I.shape[1], self.I.shape[1])
+            else:
+                x_axis = self.x_axis
+
+            if x_change:
+                sub = x_axis[frame - 1]
+                pwframe_data = np.column_stack([abs(x_axis - sub), pwframe_data])
+            else:
+                pwframe_data = np.column_stack([x_axis, pwframe_data])
+            pwframe_data = np.delete(pwframe_data, (frame-1), axis=0)
+            if use_adjP:
+                P_col = 3
+            else:
+                P_col = 2
+
+            good_points = pwframe_data[pwframe_data[:, P_col] == 1]
+            ok_points = pwframe_data[1 > pwframe_data[:, P_col]]
+            ok_points = ok_points[ok_points[:, P_col] >= P_threshold]
+            bad_points = pwframe_data[pwframe_data[:, P_col] < P_threshold]
+
+            xOrder = list(good_points[:, 0]) + list(ok_points[:, 0]) + list(bad_points[:, 0])
+            C_values = list(good_points[:, 1]) + list(ok_points[:, 1]) + list(bad_points[:, 1])
+            xData = [-1]*len(good_points[:, 0]) + [0]*len(ok_points[:, 0]) + [1]*len(bad_points[:, 0])
+
+            if P_values:
+                xOrder_sorted, xData_sorted = (list(t) for t in zip(*sorted(zip(xOrder, xData))))
+                full_data.append(xData_sorted)
+
+            else:
+                xOrder_sorted, C_values_sorted = (list(t) for t in zip(*sorted(zip(xOrder, C_values))))
+                full_data.append(C_values_sorted)
+
+        full_DataFrame = pd.DataFrame(data=full_data,
+                                      columns=xOrder_sorted,
+                                      index=range(1, num_frames+1))
+        heatmap = plt.figure()
+        ax = plt.subplot(111)
+
+        if P_values:
+            sns.heatmap(full_DataFrame, cmap=mpl.colors.ListedColormap(colours), cbar=False)
+
+            # create legend information
+            if use_adjP:
+                good_label = "adj P(>C) == 1"
+                ok_label = "{} <= adj P(>C) < 1".format(P_threshold)
+                bad_label = "adj P(>C) < {}".format(P_threshold)
+                plot_title = "adj P(>C) values for varying frame number"
+            else:
+                good_label = "P(>C) == 1"
+                ok_label = "{} <= P(>C) < 1".format(P_threshold)
+                bad_label = "P(>C) < {}".format(P_threshold)
+                plot_title = "P(>C) values for varying frame number"
+            good_patch = mpl.patches.Patch(color=colours[0], label=good_label)
+            ok_patch = mpl.patches.Patch(color=colours[1], label=ok_label)
+            bad_patch = mpl.patches.Patch(color=colours[2], label=bad_label)
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+            lgd = ax.legend(handles=[good_patch, ok_patch, bad_patch], bbox_to_anchor=(1, 1), loc=legend_loc)
+
+        else:
+            sns.heatmap(full_DataFrame, cmap="YlGnBu", cbar=True)
+            plot_title = "C values for varying frame number"
+
+        if xaxis_frame_num:
+            plt.xlabel('Frame Number', fontdict=self.PLOT_LABEL)
+        else:
+            plt.xlabel('Frame Number', fontdict=self.PLOT_LABEL)
+            # if x_change:
+            #     if self.x_units:
+            #         plt.xlabel(r'$\Delta${} ({})'.format(self.x_metric, self.x_units),
+            #                    fontdict=self.PLOT_LABEL)
+            #     else:
+            #         plt.xlabel(r'$\Delta${}'.format(self.x_metric),
+            #                    fontdict=self.PLOT_LABEL)
+            # else:
+            #     if self.x_units:
+            #         plt.xlabel("{} ({})".format(self.x_metric, self.x_units),
+            #                    fontdict=self.PLOT_LABEL)
+            #     else:
+            #         plt.xlabel("{}".format(self.x_metric),
+            #                    fontdict=self.PLOT_LABEL)
+        plt.ylabel('Frame Number', fontdict=self.PLOT_LABEL)
+        plt.title(plot_title)
+        tick_labels = np.linspace(1, num_frames, 10).astype(int)
+        plt.yticks(tick_labels[::-1], tick_labels)
+        plt.xticks(tick_labels, tick_labels, rotation='horizontal')
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                       SAVE AND/OR DISPLAY                       #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if save and filename:
+            if directory:
+                plot_path = "{}/{}".format(directory, filename)
+            else:
+                plot_path = filename
+            plt.savefig(plot_path, bbox_extra_artists=(lgd,),
+                        bbox_inches='tight')
+        elif save and not filename:
+            print "********************** ERROR ***************************"
+            print "COULD NOT SAVE PLOT"
+            print "No filename specified. Please specify a filename if you"
+            print "would like to save the plot."
+        if display:
+            heatmap.show()
+
+    # ----------------------------------------------------------------------- #
+    #                        PLOT 1D INTENSITY CURVE                          #
+    # ----------------------------------------------------------------------- #
+    def plot_1d_intensity(self, frames, start_point=1, end_point=-1,
+                          log_intensity=False, display=True, save=False,
+                          filename="", directory="", legend_loc="upper right",
+                          markersize=8):
+        """Plot 1d scatter curves
+        """
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          SET PLOT PARAMS                        #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        self.PLOT_NUM += 1
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                        PLOT INTENSITY CURVE                     #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if end_point == -1:
+            end_point = len(self.q)
+        reciprocal_resolution = self.q[start_point-1:end_point]
+        if isinstance(frames, list):
+            frames = [i - 1 for i in frames]
+        intensity = self.I[start_point-1:end_point, frames]
+        if log_intensity:
+            intensity = np.log(intensity)
+        plt.figure(self.PLOT_NUM)
+        if len(intensity.shape) == 2:
+            for i in xrange(0, intensity.shape[1]):
+                if self.x_units:
+                    plt.plot(reciprocal_resolution, intensity[:, i], 'o',
+                             markersize=markersize, markeredgecolor='#ffffff',
+                             markeredgewidth=0.2,
+                             label="Frame {}, {}={:.2f} {}".format(frames[i] + 1,
+                                                                   self.x_metric,
+                                                                   self.x_axis[frames[i]],
+                                                                   self.x_units))
+                else:
+                    plt.plot(reciprocal_resolution, intensity[:, i], 'o',
+                             label="Frame {}".format(frames[i] + 1))
+        else:
+            if self.x_units:
+                plt.plot(reciprocal_resolution, intensity, 'o',
+                         label="Frame {}, {}={:.2f} {}".format(frames,
+                                                               self.x_metric,
+                                                               self.x_axis[frames-1],
+                                                               self.x_units))
+            else:
+                plt.plot(reciprocal_resolution, intensity, 'o',
+                         label="Frame {}".format(frames))
+        plt.xlabel(r'Scattering Vector, q ($nm^{-1}$)',
+                   fontdict=self.PLOT_LABEL)
+        if log_intensity:
+            plt.ylabel('log(I) (arb. units.)', fontdict=self.PLOT_LABEL)
+        else:
+            plt.ylabel('Intensity (arb. units.)', fontdict=self.PLOT_LABEL)
+        plt.title('1D Scattering Curve', fontdict=self.PLOT_LABEL)
+        plt.legend(loc=legend_loc, scatterpoints=1)
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                       SAVE AND/OR DISPLAY                       #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if save and filename:
+            if directory:
+                plot_path = "{}/{}".format(directory, filename)
+            else:
+                plot_path = filename
+            plt.savefig(plot_path)
+        elif save and not filename:
+            print "********************** ERROR ***************************"
+            print "COULD NOT SAVE PLOT"
+            print "No filename specified. Please specify a filename if you"
+            print "would like to save the plot."
+        if display:
+            plt.show()
+
+    # ----------------------------------------------------------------------- #
+    #              PLOT FIRST N DIFFERENT FRAMES FOR EACH FRAME               #
+    # ----------------------------------------------------------------------- #
+    def plot_first_n_diff_frames(self, n=1, P_threshold=0.01,
+                                 P_type="adjP", display=True, save=False,
+                                 filename="", directory=""):
+        """For each frame in the dataset you can calculate the frame for which
+        for n-1 consecutive frames P(>C) or adj P(>C) is below P_threshold
+        where n and P_threshold are user defined values.
+
+        This methods plots this value for each frame in the dataset.
+        """
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                          SET PLOT PARAMS                        #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        self.PLOT_NUM += 1
+
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                            PLOT CURVE                           #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        num_frames = self.I.shape[1]
+        diff_frames_list = np.zeros(num_frames)
+        frames = np.linspace(1, num_frames, num_frames)
+        for i in xrange(0, num_frames):
+            frame = i+1
+            diff_frames_list[i] = self.find_first_n_diff_frames(n=n, frame=frame, P_threshold=P_threshold, P_type=P_type)
+
+        plt.figure(self.PLOT_NUM)
+        plt.plot(frames, diff_frames_list)
+        plt.xlabel("Frame Number")
+        if n == 1:
+            plt.ylabel("First Dissimilar Frame")
+        else:
+            plt.ylabel("First of {} Consecutive Dissimilar Frames".format(n))
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        #                       SAVE AND/OR DISPLAY                       #
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if save and filename:
+            if directory:
+                plot_path = "{}/{}".format(directory, filename)
+            else:
+                plot_path = filename
+            plt.savefig(plot_path)
+        elif save and not filename:
+            print "********************** ERROR ***************************"
+            print "COULD NOT SAVE PLOT"
+            print "No filename specified. Please specify a filename if you"
+            print "would like to save the plot."
+        if display:
+            plt.show()
+
+# --------------------------------------------------------------------------- #
+#                               FUNCTIONS                                     #
+# --------------------------------------------------------------------------- #
+
+
+def run_system_command(command_string):
+    """Function used to run the system command and return the log"""
+    process = subprocess.Popen(command_string, stdout=subprocess.PIPE,
+                               shell=True)  # Run system command
+    output = process.communicate()  # Get the log.
+    return output[0]  # return the log file
+
+
+def on_draw(event):
+    """Auto-wraps all text objects in a figure at draw-time"""
+    import matplotlib as mpl
+    fig = event.canvas.figure
+
+    # Cycle through all artists in all the axes in the figure
+    for ax in fig.axes:
+        for artist in ax.get_children():
+            # If it's a text artist, wrap it...
+            if isinstance(artist, mpl.text.Text):
+                autowrap_text(artist, event.renderer)
+
+    # Temporarily disconnect any callbacks to the draw event...
+    # (To avoid recursion)
+    func_handles = fig.canvas.callbacks.callbacks[event.name]
+    fig.canvas.callbacks.callbacks[event.name] = {}
+    # Re-draw the figure..
+    fig.canvas.draw()
+    # Reset the draw event callbacks
+    fig.canvas.callbacks.callbacks[event.name] = func_handles
+
+
+def autowrap_text(textobj, renderer):
+    """Wraps the given matplotlib text object so that it exceed the boundaries
+    of the axis it is plotted in."""
+    import textwrap
+    # Get the starting position of the text in pixels...
+    x0, y0 = textobj.get_transform().transform(textobj.get_position())
+    # Get the extents of the current axis in pixels...
+    clip = textobj.get_axes().get_window_extent()
+    # Set the text to rotate about the left edge (doesn't make sense otherwise)
+    textobj.set_rotation_mode('anchor')
+
+    # Get the amount of space in the direction of rotation to the left and
+    # right of x0, y0 (left and right are relative to the rotation, as well)
+    rotation = textobj.get_rotation()
+    right_space = min_dist_inside((x0, y0), rotation, clip)
+    left_space = min_dist_inside((x0, y0), rotation - 180, clip)
+
+    # Use either the left or right distance depending on the horiz alignment.
+    alignment = textobj.get_horizontalalignment()
+    if alignment is 'left':
+        new_width = right_space
+    elif alignment is 'right':
+        new_width = left_space
+    else:
+        new_width = 2 * min(left_space, right_space)
+
+    # Estimate the width of the new size in characters...
+    aspect_ratio = 0.5  # This varies with the font!!
+    fontsize = textobj.get_size()
+    pixels_per_char = aspect_ratio * renderer.points_to_pixels(fontsize)
+
+    # If wrap_width is < 1, just make it 1 character
+    wrap_width = max(1, new_width // pixels_per_char)
+    try:
+        wrapped_text = textwrap.fill(textobj.get_text(), wrap_width)
+    except TypeError:
+        # This appears to be a single word
+        wrapped_text = textobj.get_text()
+    textobj.set_text(wrapped_text)
+
+
+def min_dist_inside(point, rotation, box):
+    """Gets the space in a given direction from "point" to the boundaries of
+    "box" (where box is an object with x0, y0, x1, & y1 attributes, point is a
+    tuple of x,y, and rotation is the angle in degrees)"""
+    from math import sin, cos, radians
+    x0, y0 = point
+    rotation = radians(rotation)
+    distances = []
+    threshold = 0.0001
+    if cos(rotation) > threshold:
+        # Intersects the right axis
+        distances.append((box.x1 - x0) / cos(rotation))
+    if cos(rotation) < -threshold:
+        # Intersects the left axis
+        distances.append((box.x0 - x0) / cos(rotation))
+    if sin(rotation) > threshold:
+        # Intersects the top axis
+        distances.append((box.y1 - y0) / sin(rotation))
+    if sin(rotation) < -threshold:
+        # Intersects the bottom axis
+        distances.append((box.y0 - y0) / sin(rotation))
+    return min(distances)
