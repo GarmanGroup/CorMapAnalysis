@@ -12,9 +12,13 @@ import seaborn as sns
 
 
 class ScatterAnalysis(object):
-    """CorMap class implementing analysis of data output from a run of the
-    ATSAS suite program DATCMP
     """
+    Scatter curve similarity analysis class.
+
+    CorMap class implementing analysis of data output from a run of the
+    ATSAS suite program DATCMP.
+    """
+
     # ----------------------------------------------------------------------- #
     #                         CLASS VARIABLES                                 #
     # ----------------------------------------------------------------------- #
@@ -30,6 +34,54 @@ class ScatterAnalysis(object):
     # ----------------------------------------------------------------------- #
     def __init__(self, scat_curve_location, x_axis_vec=[], x_metric="",
                  x_units=""):
+        """
+        Create a ScatterAnalysis object.
+
+        Constructor method to create ScatterAnalysis object which exposes a
+        simple API for analysing the DATCMP data.
+
+        Parameters
+        ----------
+        scattering_curve_location : str
+            Location of the scattering curves for the dataset.
+        x_axis_vec : numpy array, optional (default=[])
+            Vector of values to use on the x-axis of plots. This can be things
+            like dose values for example. If not specified then frame number is
+            used as a default.
+        x_metric : str, optional (default="")
+            String specifying the type of metric used for the x-axis. An
+            example would be "Dose". If not specified then the default metric
+            used on the x-axis is "Frame Number"
+        x_units : str, optional (default="")
+            String specifying the units used for the x-axis metric. For example
+            if the x-axis metric was the 'dose', then x_units may be specified
+            as "kGy".
+
+        Returns
+        -------
+        ScatterAnalysis
+            The ScatterAnalysis object
+
+        Examples
+        --------
+        To create a ScatterAnalysis object that will plot only against frame
+        numbers then the only input required is the location of the set of
+        files:
+
+        >>>  scat_obj = ScatterAnalysis("saxs_files.00*.dat")
+
+        If you want to plot an x-axis that is different from the frame number,
+        e.g. the dose, then we would specify something like:
+
+        >>>  scat_obj = ScatterAnalysis("saxs_files.00*.dat", np.array([10, 20, 30, 40]), "Dose", "kGy")
+
+        Note
+        ----
+        The x_axis_vec array needs to be the same length as the total number of
+        frames in the dataset otherwise the frame number will be used on the
+        x-axis by default
+
+        """
         # Go through files and extract the frame data.
         file_list = glob.glob(scat_curve_location)
         num_frames = len(file_list)
@@ -66,7 +118,30 @@ class ScatterAnalysis(object):
     # ----------------------------------------------------------------------- #
 
     def get_datcmp_info(self, scattering_curve_files):
-        """Method to extract the data produced by from DATCMP
+        """
+        Extract the data produced by DATCMP.
+
+        This method is used by the constructor method of the ScatterAnalysis
+        class. It runs the DATCMP program on the dataset and returns a
+        dictionary containing the main results from the DATCMP run.
+
+        Parameters
+        ----------
+        scattering_curve_files : str
+            Location of the scattering curves for the dataset.
+
+        Returns
+        -------
+        dict(str, numpy.array)
+            Dictionary containing the results of the DATCMP run. The dictionary
+            key is a string (with no spaces) denoting the pair of frames that
+            were compared e.g. "1,2" would be frames 1 and 2. The dictionary
+            value is an array of DATCMP results for the corresponding pairwise
+            comparison.
+
+        Examples
+        --------
+        >>>  datcmp_data = scat_obj.get_datcmp_info("saxs_files.00*.dat")
         """
         cmd = "datcmp {}".format(scattering_curve_files)
         log = run_system_command(cmd)
@@ -85,8 +160,38 @@ class ScatterAnalysis(object):
         return data_dict
 
     def find_diff_frames(self, frame=1, P_threshold=0.01, P_type="adjP"):
-        """List all statistically different frames according to the method by
-        Daniel Franke, Cy M Jeffries & Dmitri I Svergun (2015)
+        """
+        List all statistically dissimilar frames.
+
+        This method finds all statistically dissimilar frames to any given
+        frame using the CorMap test as outlined in Daniel Franke, Cy M Jeffries
+        & Dmitri I Svergun (2015). The user can set the significance threshold
+        as well as whether to use the Bonferroni corrected P values or not.
+        (we recommend that you should use the Bonferroni corrected P values).
+
+        Parameters
+        ----------
+        frame : int, optional (default=1)
+            The frame that every other frame in the dataset is compared with.
+            If not specified then all frames are compared to the first frame.
+        P_threshold : float, optional (default=0.01)
+            The significance threshold of the test. If it's not given then the
+            default value is 1%.
+        P_type : str, optional (default="adjP")
+            string denoting whether to use the Bonferroni corrected P value
+            (input string="adjP") or the ordinary P value (input string="P").
+            Default is to use the Bonferroni corrected P value.
+
+        Returns
+        -------
+        List
+            A list of integers corresponding to all of the dissimilar frames
+
+        Examples
+        --------
+        Find all frames that are dissimilar to frame 10
+
+        >>>  diff_frames = scat_obj.find_diff_frames(frame=10)
         """
         if P_type == "adjP":
             p_col = 2
@@ -105,8 +210,8 @@ class ScatterAnalysis(object):
                     key = "{},{}".format(frame, i+1)
                 else:
                     continue
-                adjP = self.datcmp_data[key][p_col]
-                if adjP < P_threshold:
+                significance_val = self.datcmp_data[key][p_col]
+                if significance_val < P_threshold:
                     diff_frames.append(i+1)
             return diff_frames
         else:
@@ -116,8 +221,39 @@ class ScatterAnalysis(object):
 
     def find_first_n_diff_frames(self, n=1, frame=1, P_threshold=0.01,
                                  P_type="adjP"):
-        """Return the first frame, F, where there are n consecutive frames
-        after F that are also statistically different from the chosen frame.
+        """
+        Find the first of n consecutive dissimilar frames.
+
+        Return the first frame, F, where there are n-1 consecutive frames
+        after F that are also statistically dissimilar from the chosen frame.
+
+        Parameters
+        ----------
+        n : int, optional (default=1)
+            The number of consecutive dissimilar frames to be considered
+            significant.
+        frame : int, optional (default=1)
+            The frame that every other frame in the dataset is compared with.
+            If not specified then all frames are compared to the first frame.
+        P_threshold : float, optional (default=0.01)
+            The significance threshold of the test. If it's not given then the
+            default value is 1%.
+        P_type : str, optional (default="adjP")
+            string denoting whether to use the Bonferroni corrected P value
+            (input string="adjP") or the ordinary P value (input string="P").
+            Default is to use the Bonferroni corrected P value.
+
+        Returns
+        -------
+        int
+            Frame number of the first of n consecutive dissimilar frames.
+
+        Examples
+        --------
+        Get the frame number that is the first of 3 consecutive dissimilar
+        frames to frame 10.
+
+        >>>  first_diff_frames = scat_obj.find_first_n_diff_frames(n=3, frame=10)
         """
         # Get list frames that are different
         list_of_diff_frames = self.find_diff_frames(frame, P_threshold, P_type)
@@ -158,30 +294,85 @@ class ScatterAnalysis(object):
             print "Please choose a positve integer value for n."
 
     def similar_frames(self, frame=1, P_threshold=0.01, P_type="adjP"):
-        """Return list all of the frames that are similar as defined by the
-        method presented in Daniel Franke, Cy M Jeffries & Dmitri I Svergun
-        (2015).
+        """
+        List all statistically similar frames.
+
+        This method finds all statistically similar frames to any given
+        frame using the CorMap test as outlined in Daniel Franke, Cy M Jeffries
+        & Dmitri I Svergun (2015). The user can set the significance threshold
+        as well as whether to use the Bonferroni corrected P values or not.
+        (we recommend that you should use the Bonferroni corrected P values).
+
+        Parameters
+        ----------
+        frame : int, optional (default=1)
+            The frame that every other frame in the dataset is compared with.
+            If not specified then all frames are compared to the first frame.
+        P_threshold : float, optional (default=0.01)
+            The significance threshold of the test. If it's not given then the
+            default value is 1%.
+        P_type : str, optional (default="adjP")
+            string denoting whether to use the Bonferroni corrected P value
+            (input string="adjP") or the ordinary P value (input string="P").
+            Default is to use the Bonferroni corrected P value.
+
+        Returns
+        -------
+        List
+            A list of integers corresponding to all of the similar frames
+
+        Examples
+        --------
+        Find all frames that are similar to frame 10
+
+        >>>  similar_frames = scat_obj.similar_frames(frame=10)
         """
         list_of_diff_frames = self.find_diff_frames(frame, P_threshold, P_type)
         return [i+1 for i in xrange(0, self.I.shape[1]) if i+1 not in list_of_diff_frames]
 
     def get_pw_data(self, frame1, frame2, datcmp_data_type="adj P(>C)"):
-        """Return C, P(>C) or Bonferroni adjusted P(>C) value from the
-        DATCMP output.
+        """
+        Get the CorMap results for a given pair of frames.
 
-        frame1: integer number of the 1st frame used for the pairwise analyis
+        Return C, P(>C) or Bonferroni adjusted P(>C) value from the DATCMP
+        output.
 
-        frame1: integer number of the 2nd frame used for the pairwise analyis
+        Parameters
+        ----------
+        frame1 : int
+            number of the 1st frame used for the pairwise analyis
+        frame2: int
+            number of the 2nd frame used for the pairwise analyis
+        datcmp_data_type: str, optional (default="adj P(>C)")
+            String specifying the pairwise result to be returned.
+            The input options are:
+            1) 'C' - This will return the C value i.e. the max observed patch
+            of continuous runs of -1 or 1
+            2) 'P(>C)' - This will return the P value of observing a patch of
+            continuous runs of -1 or 1 bigger than the corresponding C value.
+            3) 'adj P(>C)' - This will return the Bonferroni adjusted P value
+            of observing a patch of continuous runs of -1 or 1 bigger than the
+            corresponding C value.
 
-        datcmp_data_type: string specifying the pairwise result to be returned.
-        The input options are:
-        1) 'C' - This will return the C value i.e. the max observed patch of
-        continuous runs of -1 or 1
-        2) 'P(>C)' - This will return the P value of observing a patch of
-        continuous runs of -1 or 1 bigger than the corresponding C value.
-        3) 'adj P(>C)' - This will return the Bonferroni adjusted P value of
-        observing a patch of continuous runs of -1 or 1 bigger than the
-        corresponding C value.
+        Returns
+        -------
+        int or float
+            A value specifying the largest number of consecutive positive or
+            negative values in a row, C, or the probability value (either
+            standard P or Bonferroni corrected) the we observed more than C
+            positive or negative values in a row.
+
+        Examples
+        --------
+        Get the number of the longest run of positive or negative values in a
+        row between frames 1 and 2
+
+        >>>  C = scat_obj.get_pw_data(1, 2, datcmp_data_type='C')
+
+        Get the Bonferroni corrected probability that we would observed a run
+        of positive or negative values greater than C
+
+        >>>  C = scat_obj.get_pw_data(1, 2, datcmp_data_type='adj P(>C)')
         """
         if datcmp_data_type == "C" or datcmp_data_type == 0:
             dat_type = 0
@@ -207,20 +398,88 @@ class ScatterAnalysis(object):
             print "Use different frame numbers between 1 and {}".format(self.I.shape[1])
 
     def calc_cormap(self):
-        """Return CorMap matrix i.e. the (Pearson product-moment) correlation
-        matrix.
+        """
+        Calculate correlation map.
+
+        Method to calculate the full correlation map for entire dataset.
+
+        Parameters
+        ----------
+        N/A
+
+        Returns
+        -------
+        numpy 2D array
+            2D matrix of correlations for all SAXS frames
+
+        Examples
+        --------
+        >>>  correlation_matrix = scat_obj.calc_cormap()
         """
         return np.corrcoef(self.I)
 
     def calc_pwcormap(self, frame1, frame2):
-        """Return the pairwise correlation matrix between frame 1 and frame 2
+        """
+        Calculate pairwise correlation map between two frames.
+
+        Calculation of the pairwise correlation map between two chosen frames.
+
+        Parameters
+        ----------
+        frame1 : int
+            number of the 1st frame used for the pairwise analyis
+        frame2: int
+            number of the 2nd frame used for the pairwise analyis
+
+        Returns
+        -------
+        2D Numpy array
+            Array with the correlation between two frames.
+
+        Examples
+        --------
+        Get the correlation map between frames 1 and 10.
+
+        >>>  pairwise_corr_map = scat_obj.calc_pwcormap(1, 10)
         """
         pw_I = np.column_stack([self.I[:, frame1-1], self.I[:, frame2-1]])
         return np.corrcoef(pw_I)
 
     def get_pw_data_array(self, frame=0, delete_zero_row=True):
-        """Return an array of all C, P(>C) or Bonferroni adjusted P(>C) values
-        from the DATCMP output for the requested frame.
+        """
+        Get C, P(>C) and Bonferroni corrected P(>C) values for a given frame.
+
+        Return an array of all C, P(>C) and Bonferroni adjusted P(>C) values
+        from the DATCMP output for the requested frame. E.g. if you choose
+        frame 1 then this means that the method with return an array of C,
+        P(>C) and Bonferroni adjusted P(>C) values calculated between frame 1
+        and all other frames.
+
+        Parameters
+        ----------
+        frame : int, optional (default=0)
+            The frame that every other frame in the dataset is compared with.
+            If not specified then ALL data from the DATCMP results are
+            returned.
+        delete_zero_row : bool, optional (default=True)
+            Choose whether to include a row where the chosen frame would've
+            been compared with itself - although this row is filled with zero.
+            This makes sure that you'll return an array whose number of rows
+            is the same as the number of frames. By default this is set to
+            false.
+
+        Returns
+        -------
+        2D Numpy array
+            Array of all C, P(>C) and Bonferroni adjusted P(>C) values from the
+            DATCMP results for the requested frame.
+
+        Examples
+        --------
+        Get all DATCMP data for when all other frames are compared with frame
+        10
+
+        >>>  datcmp_data = scat_obj.get_pw_data_array(frame=10)
         """
         if frame == 0:
             pw_data = np.zeros([len(self.datcmp_data), 3])
