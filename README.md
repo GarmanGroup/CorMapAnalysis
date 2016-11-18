@@ -1,6 +1,12 @@
 # CorMapAnalysis
 Library to visualise the CorMap (Correlation Map) test results for SAXS data. If you use this library for your work, please cite [[1]](#references).
 
+### Contents
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Usage](#usage)
+- [References](#references)
+
 ### Introduction
 The library provided in this repository provides methods to analyse and visualise results from the CorMap test [[2]](#references) which is performed by the [DATCMP](https://www.embl-hamburg.de/biosaxs/manuals/datcmp.html) program within the [ATSAS](https://www.embl-hamburg.de/biosaxs/software.html) software suite [[3]](#references). Mostly it allows users to assess the similarity of frames and hence has the potential to determine systematically which frames can be merged for SAXS data processing.
 
