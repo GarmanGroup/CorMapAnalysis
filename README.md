@@ -5,6 +5,7 @@ Library to visualise the CorMap (Correlation Map) test results for SAXS data. If
 - [Introduction](#introduction)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Known Issues](#known-issues)
 - [References](#references)
 
 ### Introduction
