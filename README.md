@@ -33,6 +33,10 @@ help(scat_obj.plot_heatmap)
 ```
 All methods have been thoroughly documented using the [Numpy style docstring format](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html). For a tutorial that you can follow with sample data check out the [tutorial](https://github.com/GarmanGroup/CorMapAnalysis/tree/master/Tutorial).
 
+### Known Issues
+- The class may not read data that is subtracted with [DATOP](https://www.embl-hamburg.de/biosaxs/manuals/datop.html) (from the ATSAS suite) because the format doesn't read nicely with the Numpy `loadtxt` method. I need to write a custom parser so it will work.
+- The `plot_scatter` method currently plots 2 figures and two x-axes which may not overlap well. I need to revert back to plotting a single x-axis.
+
 ### References
 [1] Brooks-Bartlett, J.C., Batters, R.A., Bury, C.S., Lowe, E.D., Ginn, H.M., Round, A. & Garman, E.F.    
 Development of tools to automate quantitative analysis of radiation damage in SAXS experiments    
