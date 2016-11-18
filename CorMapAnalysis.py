@@ -178,7 +178,7 @@ class ScatterAnalysis(object):
             The significance threshold of the test. If it's not given then the
             default value is 1%.
         P_type : str, optional (default="adjP")
-            string denoting whether to use the Bonferroni corrected P value
+            String denoting whether to use the Bonferroni corrected P value
             (input string="adjP") or the ordinary P value (input string="P").
             Default is to use the Bonferroni corrected P value.
 
@@ -341,7 +341,7 @@ class ScatterAnalysis(object):
         ----------
         frame1 : int
             number of the 1st frame used for the pairwise analyis
-        frame2: int
+        frame2 : int
             number of the 2nd frame used for the pairwise analyis
         datcmp_data_type: str, optional (default="adj P(>C)")
             String specifying the pairwise result to be returned.
@@ -427,9 +427,9 @@ class ScatterAnalysis(object):
         Parameters
         ----------
         frame1 : int
-            number of the 1st frame used for the pairwise analyis
-        frame2: int
-            number of the 2nd frame used for the pairwise analyis
+            Number of the 1st frame used for the pairwise analyis
+        frame2 : int
+            Number of the 2nd frame used for the pairwise analyis
 
         Returns
         -------
@@ -511,7 +511,37 @@ class ScatterAnalysis(object):
 # ----------------------------------------------------------------------- #
     def plot_cormap(self, colour_scheme="gray", display=True, save=False,
                     filename="", directory=""):
-        """Create a CorMap (correlation map) plot
+        """
+        Plot the full correlation map.
+
+        Plot the correlation map of all frames in the dataset.
+
+        Parameters
+        ----------
+        colour_scheme : str, optional (default="gray")
+            The colour scheme used to plot the correlation map. The list of
+            schemes can be found on the relevant matplotlib webpage:
+            http://matplotlib.org/examples/color/colormaps_reference.html
+        display : bool, optional (default=True)
+            Choose whether to display the plot. By default it is displayed.
+        save : bool, optional (default=True)
+            Choose whether to save the plot. By default the plot is not saved.
+        filename : str, optional  (default="")
+            Choose a filename for the plot that you want to save. This includes
+            the file extension.
+        directory : str, optional  (default="")
+            Select the directory in which you want the plot to be saved.
+
+        Examples
+        --------
+        Plot the full correlation map
+
+        >>>  scat_obj.plot_cormap()
+
+        Save the correlation map in the current working directory without
+        displaying it
+
+        >>>  scat_obj.plot_cormap(display=False, save=True, filename="MyPlot.png")
         """
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
         #                          SET PLOT PARAMS                        #
@@ -556,7 +586,41 @@ class ScatterAnalysis(object):
 # ----------------------------------------------------------------------- #
     def plot_pwcormap(self, fr1, fr2, colour_scheme="gray", display=True,
                       save=False, filename="", directory=""):
-        """Create a pairwise CorMap plot.
+        """
+        Plot the pairwise correlation map between two chosen frames.
+
+        Plot the pairwise correlation map between two frames fr1 and fr2.
+
+        Parameters
+        ----------
+        fr1 : int
+            Number of the 1st frame used for the pairwise analyis
+        fr2 : int
+            Number of the 2nd frame used for the pairwise analyis
+        colour_scheme : str, optional (default="gray")
+            The colour scheme used to plot the correlation map. The list of
+            schemes can be found on the relevant matplotlib webpage:
+            http://matplotlib.org/examples/color/colormaps_reference.html
+        display : bool, optional (default=True)
+            Choose whether to display the plot. By default it is displayed.
+        save : bool, optional (default=True)
+            Choose whether to save the plot. By default the plot is not saved.
+        filename : str, optional  (default="")
+            Choose a filename for the plot that you want to save. This includes
+            the file extension.
+        directory : str, optional  (default="")
+            Select the directory in which you want the plot to be saved.
+
+        Examples
+        --------
+        Plot the pairwise correlation map between frame 1 and frame 2
+
+        >>>  scat_obj.plot_pwcormap(1, 2)
+
+        Save the pairwise correlation map in the current working directory
+        without displaying it
+
+        >>>  scat_obj.plot_pwcormap(1, 2, display=False, save=True, filename="MyPlot.png")
         """
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
         #                          SET PLOT PARAMS                        #
@@ -608,10 +672,59 @@ class ScatterAnalysis(object):
     # ----------------------------------------------------------------------- #
     #                  PLOT THE HISTOGRAM OF PAIRWISE DATA                    #
     # ----------------------------------------------------------------------- #
-    def plot_histogram(self, frame=0, datcmp_data_type="C",
-                       display=True, save=False, filename="",
-                       directory="", num_bins=20):
-        """Plot histogram of pairwise correlation data
+    def plot_histogram(self, frame=0, datcmp_data_type="C", display=True,
+                       save=False, filename="", directory="", num_bins=20):
+        """
+        Plot the histogram of the DATCMP data.
+
+        For any chosen frame this methods plots a histogram of the DATCMP data
+        for all pairwise comparisons with that frame. If no frames are chosen
+        then the method plots all pairwise frame comparison data.
+
+        Parameters
+        ----------
+        frame : int, optional (default=0)
+            Number of the frame for which all pairwise comparison data is
+            plotted. If not specified then all pairwise frame comparison data
+            is shown.
+        datcmp_data_type : str, optional (default="C")
+            The data type from the DATCMP results that is plotted.
+            The input options are:
+            1) 'C' - This will return the C value i.e. the max observed patch
+            of continuous runs of -1 or 1
+            2) 'P(>C)' - This will return the P value of observing a patch of
+            continuous runs of -1 or 1 bigger than the corresponding C value.
+            3) 'adj P(>C)' - This will return the Bonferroni adjusted P value
+            of observing a patch of continuous runs of -1 or 1 bigger than the
+            corresponding C value.
+        display : bool, optional (default=True)
+            Choose whether to display the plot. By default it is displayed.
+        save : bool, optional (default=True)
+            Choose whether to save the plot. By default the plot is not saved.
+        filename : str, optional  (default="")
+            Choose a filename for the plot that you want to save. This includes
+            the file extension.
+        directory : str, optional  (default="")
+            Select the directory in which you want the plot to be saved.
+        num_bins : int, optional (default=20)
+            Number of bins used to plot in the histogram.
+
+        Examples
+        --------
+        Plot histogram of all of the DATCMP data with data type "C" (as defined
+        above)
+
+        >>>  scat_obj.plot_histogram()
+
+        Plot histogram of all of Bonferroni corrected P values with all frames
+        compared to frame 10.
+
+        >>> scat_obj.plot_histogram(frame=10, datcmp_data_type="adj P(>C)")
+
+        Save the histogram in the current working directory without displaying
+        it
+
+        >>>  scat_obj.plot_histogram(display=False, save=True, filename="MyPlot.png")
         """
         if datcmp_data_type == "C" or datcmp_data_type == 0:
             dat_type = 0
@@ -666,8 +779,87 @@ class ScatterAnalysis(object):
                      xaxis_frame_num=False,
                      colours=["#0072B2", "#009E73", "#D55E00"],
                      markers=["o", "o", "o"]):
-        """Scatter plot of the C values for a chosen frame against all other
-        frames.
+        """
+        Create scatter plot of the frame similarity data.
+
+        For any chosen frame this methods creates a scatter plot of the C
+        values - the maximum observed patch of continuous runs of -1 or 1 - for
+        a chosen frame against all other frames. The probabilities of those C
+        values occuring by chance are also coloured accordingly, and this can
+        be changed by the user.
+
+        Parameters
+        ----------
+        frame : int, optional (default=0)
+            Number of the frame for which all pairwise comparison data is
+            plotted. If not specified then all pairwise frame comparison data
+            against frame 1 is plotted.
+        P_threshold : float, optional (default=0.01)
+            The significance level for the data. If the probability is below
+            this value then the current frame is considered dissimilar to the
+            frame to which it is being compared. Default significance level is
+            0.01.
+        markersize : float, optional (default=60)
+            Change the size of the markers on the plot. Default value is 60.
+        display : bool, optional (default=True)
+            Choose whether to display the plot. By default it is displayed.
+        save : bool, optional (default=True)
+            Choose whether to save the plot. By default the plot is not saved.
+        filename : str, optional  (default="")
+            Choose a filename for the plot that you want to save. This includes
+            the file extension.
+        directory : str, optional  (default="")
+            Select the directory in which you want the plot to be saved.
+        legend_loc : str or int, optional (default="upper left")
+            Set the location of the legend in the figure. All possible values
+            can be found in the Matplotlib Legend API documentation:
+            http://matplotlib.org/api/legend_api.html. Default is set to the
+            upper left of the figure.
+        x_change : bool, optional (default=False)
+            This option changes whether the x-axis is plotted with absolute
+            values (x_change=True) or if it's plotted with differences between
+            the x-axis values (x_change=False). For example if we compare
+            choose the reference frame to be frame 10 (frame=10) then compare
+            this with frame 30 then setting x_change=True will put the relevant
+            point at frame 30. However if we set x_change=False this will put
+            the relevant point to be at abs(10 - 30) = 20. This option allows
+            you to determine if the dissimilar frames are frames that are
+            collected far from the current frame. Default is set to
+            x_change=True.
+        use_adjP : bool, optional (default=True)
+            Choose whether to use the Bonferroni corrected P values or to use
+            the unadjusted P values. Default is to use the Bonferroni corrected
+            P values.
+        xaxis_frame_num : bool, optional (default=True)
+            Choose whether to plot the x-axis with the frame number or whether
+            to use the custom x-axis metric values that may (or may not) have
+            been defined when the ScatterAnalysis object was constructed.
+            Default is to use the custom metric (if it was defined).
+        colours : list, optional (default=["#0072B2", "#009E73", "#D55E00"])
+            Choose the colour scheme for the markers in the scatter plot, which
+            is differentiated by the P value.
+        markers : list, optional (default=["o", "o", "o"])
+            Choose the markers used for the markers in the scatter plot, which
+            is differentiated by the P value. A list of the markers that can be
+            used can be found on the Matplotlib Markers API webpage:
+            http://matplotlib.org/api/markers_api.html
+
+
+        Examples
+        --------
+        Create the scatter plot of the data compared against frame 1
+
+        >>>  scat_obj.plot_scatter()
+
+        Create scatter plot where all frames are compared against frame 30 and
+        the x axis plots the difference in frame number from frame 30.
+
+        >>> scat_obj.plot_scatter(frame=30, x_change=True)
+
+        Save the scatter plot in the current working directory without
+        displaying it.
+
+        >>>  scat_obj.plot_scatter(display=False, save=True, filename="MyPlot.png")
         """
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
         #                          SET PLOT PARAMS                        #
@@ -776,8 +968,72 @@ class ScatterAnalysis(object):
                      legend_loc=2, x_change=False, use_adjP=True,
                      xaxis_frame_num=False, P_values=True,
                      colours=["#0072B2", "#009E73", "#D55E00"]):
-        """Heatmap plot of the P(>C) values for all frames against all other
-        frames.
+        """
+        Create Heatmap of the frame similarity data.
+
+        The heatmap provides a visual representation of the pairwise similarity
+        analyis of the SAXS dataset.
+
+        Parameters
+        ----------
+        P_threshold : float, optional (default=0.01)
+            The significance level for the data. If the probability is below
+            this value then one frame is considered dissimilar to the
+            frame to which it is being compared. Default significance level is
+            0.01.
+        markersize : float, optional (default=60)
+            Change the size of the markers on the plot. Default value is 60.
+        display : bool, optional (default=True)
+            Choose whether to display the plot. By default it is displayed.
+        save : bool, optional (default=True)
+            Choose whether to save the plot. By default the plot is not saved.
+        filename : str, optional  (default="")
+            Choose a filename for the plot that you want to save. This includes
+            the file extension.
+        directory : str, optional  (default="")
+            Select the directory in which you want the plot to be saved.
+        legend_loc : str or int, optional (default=2)
+            Set the location of the legend in the figure. All possible values
+            can be found in the Matplotlib Legend API documentation:
+            http://matplotlib.org/api/legend_api.html. Default is set to the
+            upper left (integer value is 2) of the figure.
+        x_change : bool, optional (default=False)
+            This option changes whether the x-axis is plotted with absolute
+            values (x_change=True) or if it's plotted with differences between
+            the x-axis values (x_change=False). For example if we compare
+            choose the reference frame to be frame 10 (frame=10) then compare
+            this with frame 30 then setting x_change=True will put the relevant
+            point at frame 30. However if we set x_change=False this will put
+            the relevant point to be at abs(10 - 30) = 20. This option allows
+            you to determine if the dissimilar frames are frames that are
+            collected far from the current frame. Default is set to
+            x_change=True.
+        use_adjP : bool, optional (default=True)
+            Choose whether to use the Bonferroni corrected P values or to use
+            the unadjusted P values. Default is to use the Bonferroni corrected
+            P values.
+        xaxis_frame_num : bool, optional (default=True)
+            Choose whether to plot the x-axis with the frame number or whether
+            to use the custom x-axis metric values that may (or may not) have
+            been defined when the ScatterAnalysis object was constructed.
+            Default is to use the custom metric (if it was defined).
+        P_values : bool, optional (default=True)
+            Choose whether to plot probability values or C values - the maximum
+            observed patch of continuous runs of -1 or 1. Default is to use the
+            P values.
+        colours : list, optional (default=["#0072B2", "#009E73", "#D55E00"])
+            Choose the colour scheme for the markers in the scatter plot, which
+            is differentiated by the P value.
+
+        Examples
+        --------
+        Create heatmap.
+
+        >>>  scat_obj.plot_heatmap()
+
+        Save the heatmap in the current working directory withot displaying it.
+
+        >>>  scat_obj.plot_heatmap(display=False, save=True, filename="MyPlot.png")
         """
         full_data = []
         num_frames = self.I.shape[1]
@@ -895,10 +1151,63 @@ class ScatterAnalysis(object):
     #                        PLOT 1D INTENSITY CURVE                          #
     # ----------------------------------------------------------------------- #
     def plot_1d_intensity(self, frames, start_point=1, end_point=-1,
-                          log_intensity=False, display=True, save=False,
+                          log_intensity=True, display=True, save=False,
                           filename="", directory="", legend_loc="upper right",
                           markersize=8):
-        """Plot 1d scatter curves
+        """
+        Plot 1D scatter curves.
+
+        Choose frames for which to plot the 1D scatter curves in the same
+        figure.
+
+        Parameters
+        ----------
+        frames : int or list
+            Number of the frame or list of frame numbers to be plotted on the
+            figure.
+        start_point : int, optional (default=1)
+            The point on the scatter curve from which you would like to start
+            the plot. Default is to plot from the first point.
+        end_point : int, optional (default=-1)
+            The point on the scatter curve from which you would like to end
+            the plot. Default is to plot up until to very last point on the
+            curve.
+        log_intensity : bool, optional (default=True)
+            Choose whether to plot the intensity curve on a logarithmic scale
+            (default) or on an absolute scale.
+        display : bool, optional (default=True)
+            Choose whether to display the plot. By default it is displayed.
+        save : bool, optional (default=True)
+            Choose whether to save the plot. By default the plot is not saved.
+        filename : str, optional  (default="")
+            Choose a filename for the plot that you want to save. This includes
+            the file extension.
+        directory : str, optional  (default="")
+            Select the directory in which you want the plot to be saved.
+        legend_loc : str or int, optional (default="upper left")
+            Set the location of the legend in the figure. All possible values
+            can be found in the Matplotlib Legend API documentation:
+            http://matplotlib.org/api/legend_api.html. Default is set to the
+            upper left of the figure.
+        markersize : float, optional (default=60)
+            Change the size of the markers on the plot. Default value is 60.
+
+
+        Examples
+        --------
+        Plot the 1D intensity curve for frames 1, 10 and 100
+
+        >>>  scat_obj.plot_1d_intensity([1, 10, 100], start_point=200, end_point=400)
+
+        Plot the 1D intensity curve for frames 1, 10 and 100 between point 200
+        and 400.
+
+        >>>  scat_obj.plot_1d_intensity([1, 10, 100])
+
+        Save the 1D intensity plot in the current working directory without
+        displaying it.
+
+        >>>  scat_obj.plot_1d_intensity(display=False, save=True, filename="MyPlot.png")
         """
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
         #                          SET PLOT PARAMS                        #
@@ -972,11 +1281,60 @@ class ScatterAnalysis(object):
     def plot_first_n_diff_frames(self, n=1, P_threshold=0.01,
                                  P_type="adjP", display=True, save=False,
                                  filename="", directory=""):
-        """For each frame in the dataset you can calculate the frame for which
-        for n-1 consecutive frames P(>C) or adj P(>C) is below P_threshold
-        where n and P_threshold are user defined values.
+        """
+        Plot dissimilar frames
 
-        This methods plots this value for each frame in the dataset.
+        For each frame in the dataset you can perform a similarity analysis
+        against every other frame. From this you can calculate the first frame
+        for which the probability value (P(>C) or adj P(>C)) for n consecutive
+        frames is below the significance value (signifying that the frames are
+        likely to be dissimilar). Note here that n and the P_threshold
+        (significance value) are user defined values.
+        This methods plots the first frame in that consecutive run for each
+        'reference' frame in the dataset. By reference frame, we mean the frame
+        for which every other frame is compared.
+
+        Parameters
+        ----------
+        n : int, optional (default=1)
+            Number of consecutive dissimilar frames to be considered
+            dissimilar.
+        P_threshold : float, optional (default=0.01)
+            The significance level for the data. If the probability is below
+            this value then one frame is considered dissimilar to the
+            frame to which it is being compared. Default significance level is
+            0.01.
+        P_type : str, optional (default="adjP")
+            String denoting whether to use the Bonferroni corrected P value
+            (input string="adjP") or the ordinary P value (input string="P").
+            Default is to use the Bonferroni corrected P value.
+        display : bool, optional (default=True)
+            Choose whether to display the plot. By default it is displayed.
+        save : bool, optional (default=True)
+            Choose whether to save the plot. By default the plot is not saved.
+        filename : str, optional  (default="")
+            Choose a filename for the plot that you want to save. This includes
+            the file extension.
+        directory : str, optional  (default="")
+            Select the directory in which you want the plot to be saved.
+
+        Examples
+        --------
+        Plot the first dissimilar frame for each frame in the dataset used as
+        the reference frame.
+
+        >>>  scat_obj.plot_first_n_diff_frames()
+
+        Plot the first of 3 consecutive dissimilar frames for each frame in the
+        dataset used as the reference frame (as was the case described in
+        Brooks-Bartlett et al. 2016 - Development of tools to automate
+        quantitative analysis of radiation damage in SAXS experiments).
+
+        >>>  scat_obj.plot_first_n_diff_frames(n=3)
+
+        Save the plot in the current working directory without displaying it.
+
+        >>>  scat_obj.plot_first_n_diff_frames(display=False, save=True, filename="MyPlot.png")
         """
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
         #                          SET PLOT PARAMS                        #
@@ -995,7 +1353,7 @@ class ScatterAnalysis(object):
 
         plt.figure(self.PLOT_NUM)
         plt.plot(frames, diff_frames_list)
-        plt.xlabel("Frame Number")
+        plt.xlabel("Reference Frame Number")
         if n == 1:
             plt.ylabel("First Dissimilar Frame")
         else:
