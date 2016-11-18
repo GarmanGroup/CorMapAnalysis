@@ -28,17 +28,17 @@ help(scat_obj.plot_heatmap)
 All methods have been thoroughly documented using the [Numpy style docstring format](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html). For a tutorial that you can follow with sample data check out the tutorial.
 
 ### References
-[1] Brooks-Bartlett, J.C., Batters, R.A., Bury, C.S., Lowe, E.D., Ginn, H.M., Round, A. & Garman, E.F.    
+[1]: Brooks-Bartlett, J.C., Batters, R.A., Bury, C.S., Lowe, E.D., Ginn, H.M., Round, A. & Garman, E.F.    
 Development of tools to automate quantitative analysis of radiation damage in SAXS experiments    
 *J. Synchrotron Rad*. (2016). **23**   
 [doi:10.1107/S1600577516015083](https://doi.org/10.1107/S1600577516015083). (***Not yet online***)
 
-[2] Franke, Daniel, Cy M. Jeffries, and Dmitri I. Svergun.   
+[2]: Franke, Daniel, Cy M. Jeffries, and Dmitri I. Svergun.   
 "Correlation Map, a goodness-of-fit test for one-dimensional X-ray scattering spectra"   
 *Nature methods* (2015). **12.5**, 419-422   
 [doi:10.1038/nmeth.3358](https://doi.org/10.1038/nmeth.3358)
 
-[3] Petoukhov, M.V., Franke, D., Shkumatov, A.V., Tria, G., Kikhney, A.G., Gajda, M., Gorba, C., Mertens, H.D.T., Konarev, P.V. and Svergun, D.I. (2012)   
+[3]: Petoukhov, M.V., Franke, D., Shkumatov, A.V., Tria, G., Kikhney, A.G., Gajda, M., Gorba, C., Mertens, H.D.T., Konarev, P.V. and Svergun, D.I. (2012)   
 "New developments in the ATSAS program package for small-angle scattering data analysis"   
 *J. Appl. Cryst.* **45**, 342-350
 [doi:10.1107/S0021889812007662](https://doi.org/10.1107/S0021889812007662)
