@@ -37,6 +37,7 @@ All methods have been thoroughly documented using the [Numpy style docstring for
 ### Known Issues
 - The class may not read data that is subtracted with [DATOP](https://www.embl-hamburg.de/biosaxs/manuals/datop.html) (from the ATSAS suite) because the format doesn't read nicely with the Numpy `loadtxt` method. I need to write a custom parser so it will work.
 - The `plot_scatter` method currently plots 2 figures and two x-axes which may not overlap well. I need to revert back to plotting a single x-axis.
+- The pairwise CorMap plots should give values of either 1 (white) or -1 (black) but the colorbar gives a continuous output between 1 and -1 which is misleading. I need to sort this out so the colorbar only displays 1 or -1.
 
 ### References
 [1] Brooks-Bartlett, J.C., Batters, R.A., Bury, C.S., Lowe, E.D., Ginn, H.M., Round, A. & Garman, E.F.    
