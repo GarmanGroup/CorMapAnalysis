@@ -43,7 +43,7 @@ All methods have been thoroughly documented using the [Numpy style docstring for
 [1] Brooks-Bartlett, J.C., Batters, R.A., Bury, C.S., Lowe, E.D., Ginn, H.M., Round, A. & Garman, E.F.    
 Development of tools to automate quantitative analysis of radiation damage in SAXS experiments    
 *J. Synchrotron Rad*. (2016). **23**   
-[doi:10.1107/S1600577516015083](https://doi.org/10.1107/S1600577516015083). (***Not yet online***)
+[doi:10.1107/S1600577516015083](https://doi.org/10.1107/S1600577516015083).
 
 [2] Franke, Daniel, Cy M. Jeffries, and Dmitri I. Svergun.   
 "Correlation Map, a goodness-of-fit test for one-dimensional X-ray scattering spectra"   
