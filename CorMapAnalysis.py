@@ -896,47 +896,43 @@ class ScatterAnalysis(object):
             P_col = 2
 
         plt.figure(self.PLOT_NUM)
-        fig, ax1 = plt.subplots()
-        ax2 = ax1.twiny()
-        ax1.set_xlim([-10,70])
-        ax1.set_xlabel("Dose (kGy)", fontdict=self.PLOT_LABEL)
         good_points = pwframe_data[pwframe_data[:, P_col] == 1]
-        ax2.scatter(good_points[:, 0], good_points[:, 1], color=lb_dict[0][0],
+        plt.scatter(good_points[:, 0], good_points[:, 1], color=lb_dict[0][0],
                     s=markersize, edgecolors='#ffffff', alpha=1,
                     marker=markers[0], label=lb_dict[0][1])
 
         ok_points = pwframe_data[1 > pwframe_data[:, P_col]]
         ok_points = ok_points[ok_points[:, P_col] >= P_threshold]
-        ax2.scatter(ok_points[:, 0], ok_points[:, 1], color=lb_dict[1][0],
+        plt.scatter(ok_points[:, 0], ok_points[:, 1], color=lb_dict[1][0],
                     s=markersize, edgecolors='#ffffff', alpha=1,
                     marker=markers[1], label=lb_dict[1][1])
 
         bad_points = pwframe_data[pwframe_data[:, P_col] < P_threshold]
-        ax2.scatter(bad_points[:, 0], bad_points[:, 1], color=lb_dict[2][0],
+        plt.scatter(bad_points[:, 0], bad_points[:, 1], color=lb_dict[2][0],
                     s=markersize, edgecolors='#ffffff', alpha=1,
                     marker=markers[2], label=lb_dict[2][1])
 
-        ax2.legend(loc=legend_loc, scatterpoints=1)
+        plt.legend(loc=legend_loc, scatterpoints=1)
         if x_change:
             if xaxis_frame_num:
-                ax2.set_xlabel(r'$\Delta${}'.format("Frame Number"),
+                plt.xlabel(r'$\Delta${}'.format("Frame Number"),
                                fontdict=self.PLOT_LABEL)
             elif self.x_units:
-                ax2.set_xlabel(r'$\Delta${} ({})'.format(self.x_metric, self.x_units),
+                plt.xlabel(r'$\Delta${} ({})'.format(self.x_metric, self.x_units),
                                fontdict=self.PLOT_LABEL)
             else:
-                ax2.set_xlabel(r'$\Delta${}'.format(self.x_metric),
+                plt.xlabel(r'$\Delta${}'.format(self.x_metric),
                                fontdict=self.PLOT_LABEL)
         else:
             if xaxis_frame_num:
-                ax2.set_xlabel("Frame Number", fontdict=self.PLOT_LABEL)
+                plt.xlabel("Frame Number", fontdict=self.PLOT_LABEL)
             elif self.x_units:
-                ax2.set_xlabel("{} ({})".format(self.x_metric, self.x_units),
+                plt.xlabel("{} ({})".format(self.x_metric, self.x_units),
                                fontdict=self.PLOT_LABEL)
             else:
-                ax2.set_xlabel("{}".format(self.x_metric),
+                plt.xlabel("{}".format(self.x_metric),
                                fontdict=self.PLOT_LABEL)
-        ax2.set_ylabel(r'C', fontdict=self.PLOT_LABEL)
+        plt.ylabel(r'C', fontdict=self.PLOT_LABEL)
         # if xaxis_frame_num:
         #     ax1.set_title("C values against frame number for frame {}".format(frame))
         # else:
