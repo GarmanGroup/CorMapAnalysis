@@ -73,6 +73,10 @@ class ScatterAnalysis(object):
         self.x_metric = x_metric
         self.x_units = x_units
 
+    # ----------------------------------------------------------------------- #
+    #                            CLASS METHODS                                #
+    # ----------------------------------------------------------------------- #
+
     # Note that class methods can access class attributes but not instance
     # attributes.
     @classmethod
@@ -160,9 +164,6 @@ class ScatterAnalysis(object):
         return cls(intensities, scattering_angles, datcmp_data, x_axis,
                    x_metric, x_units)
 
-    # ----------------------------------------------------------------------- #
-    #                         INSTANCE METHODS                                #
-    # ----------------------------------------------------------------------- #
     @classmethod
     def get_datcmp_info(self, scattering_curve_files):
         """
@@ -205,6 +206,10 @@ class ScatterAnalysis(object):
                                                                float(data[4]),
                                                                float(data[5])]
         return data_dict
+
+    # ----------------------------------------------------------------------- #
+    #                         INSTANCE METHODS                                #
+    # ----------------------------------------------------------------------- #
 
     def find_diff_frames(self, frame=1, P_threshold=0.01, P_type="adjP"):
         """
