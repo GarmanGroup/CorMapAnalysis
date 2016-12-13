@@ -1,6 +1,8 @@
 # CorMapAnalysis
 Library to visualise the CorMap (Correlation Map) test results for SAXS data. If you use this library for your work, please cite [[1]](#references).
 
+##### Note: The current tutorial is outdated and need to be updated. I will get to that after I've made the relevant improvements that I want to make
+
 ### Contents
 - [Introduction](#introduction)
 - [Installation](#installation)

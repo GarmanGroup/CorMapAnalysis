@@ -32,8 +32,8 @@ class ScatterAnalysis(object):
     # ----------------------------------------------------------------------- #
     #                         CONSTRUCTOR METHOD                              #
     # ----------------------------------------------------------------------- #
-    def __init__(self, scat_curve_location, x_axis_vec=[], x_metric="",
-                 x_units=""):
+    def __init__(self, intensities, scattering_angles, datcmp_data,
+                 x_axis_vec=[], x_metric="", x_units=""):
         """
         Create a ScatterAnalysis object.
 
@@ -42,9 +42,53 @@ class ScatterAnalysis(object):
 
         Parameters
         ----------
+        intensities : 2D numpy array
+            Array of intensity values where each column represents the
+            intensity values for a single frame and each row represents the
+            intensity at a particular scattering angle.
+        scattering_angles : 1D numpy array
+            Array of scattering angles measured for the SAXS run.
+        datcmp_data : dictionary
+            dictionary containing all of the data from the DATCMP output. The
+            key type is a string of image pairs and the value type is a list of
+            the pairwise correlation results from the analysis between the
+            image pairs.
+        x_axis_vec : numpy array, optional (default=[])
+            Vector of values to use on the x-axis of plots. This can be things
+            like dose values for example. If not specified then frame number is
+            used as a default.
+        x_metric : str, optional (default="")
+            String specifying the type of metric used for the x-axis. An
+            example would be "Dose". If not specified then the default metric
+            used on the x-axis is "Frame Number"
+        x_units : str, optional (default="")
+            String specifying the units used for the x-axis metric. For example
+            if the x-axis metric was the 'dose', then x_units may be specified
+            as "kGy".
+        """
+        self.I = intensities
+        self.q = scattering_angles
+        self.datcmp_data = datcmp_data
+        self.x_axis = x_axis_vec
+        self.x_metric = x_metric
+        self.x_units = x_units
+
+    # Note that class methods can access class attributes but not instance
+    # attributes.
+    @classmethod
+    def from_1d_curves(cls, scat_curve_location, x_axis_vec=[], metric="",
+                       units=""):
+        """
+        Create a ScatterAnalysis object from .
+
+        Method to create ScatterAnalysis object from a set of 1D scattering
+        curve files.
+
+        Parameters
+        ----------
         scattering_curve_location : str
             Location of the scattering curves for the dataset.
-        x_axis_vec : numpy array, optional (default=[])
+        x_axis : numpy array, optional (default=[])
             Vector of values to use on the x-axis of plots. This can be things
             like dose values for example. If not specified then frame number is
             used as a default.
@@ -85,38 +129,41 @@ class ScatterAnalysis(object):
         # Go through files and extract the frame data.
         file_list = glob.glob(scat_curve_location)
         num_frames = len(file_list)
-        self.q = np.loadtxt(file_list[0])[:, 0]
-        self.I = np.zeros([len(self.q), num_frames])
+        scattering_angles = np.loadtxt(file_list[0])[:, 0]
+        intensities = np.zeros([len(scattering_angles), num_frames])
         for i, file in enumerate(file_list):
             frame_data = np.loadtxt(file)
-            self.I[:, i] = frame_data[:, 1]
+            intensities[:, i] = frame_data[:, 1]
 
         # Run DATCMP to get pairwise comparison information.
-        self.datcmp_data = self.get_datcmp_info(scat_curve_location)
+        datcmp_data = ScatterAnalysis.get_datcmp_info(scat_curve_location)
 
         # Organise the x-axis used for the plots. Default will be the frame
         # number.
         if not isinstance(x_axis_vec, list):
             if len(x_axis_vec) == num_frames:
-                self.x_axis = x_axis_vec
+                x_axis = x_axis_vec
             else:
                 print "x_axis_vec is not the same length as the number of"
                 print "frames. Using frame numbers instead."
-                self.x_axis = np.linspace(1, num_frames, num_frames)
+                x_axis = np.linspace(1, num_frames, num_frames)
         else:
-            self.x_axis = np.linspace(1, num_frames, num_frames)
+            x_axis = np.linspace(1, num_frames, num_frames)
 
-        if x_metric and x_units:
-            self.x_metric = x_metric
-            self.x_units = x_units
+        if metric and units:
+            x_metric = metric
+            x_units = units
         else:
-            self.x_metric = "Frame number"
-            self.x_units = ""
+            x_metric = "Frame number"
+            x_units = ""
+
+        return cls(intensities, scattering_angles, datcmp_data, x_axis,
+                   x_metric, x_units)
 
     # ----------------------------------------------------------------------- #
     #                         INSTANCE METHODS                                #
     # ----------------------------------------------------------------------- #
-
+    @classmethod
     def get_datcmp_info(self, scattering_curve_files):
         """
         Extract the data produced by DATCMP.
