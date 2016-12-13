@@ -642,7 +642,7 @@ class ScatterAnalysis(object):
                    fontdict=self.PLOT_LABEL)
         plt.ylabel(r'Scattering Vector, q (nm$^{-1}$)',
                    fontdict=self.PLOT_LABEL)
-        plt.colorbar(cormap)
+        plt.colorbar(cormap, ticks=[1, -1])
         adjP = self.get_pw_data(fr1, fr2, "adj P(>C)")
         C = self.get_pw_data(fr1, fr2, "C")
         if self.x_units:

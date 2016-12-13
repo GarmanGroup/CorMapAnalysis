@@ -35,7 +35,7 @@ help(scat_obj.plot_heatmap)
 All methods have been thoroughly documented using the [Numpy style docstring format](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html). For a tutorial that you can follow with sample data check out the [tutorial](https://github.com/GarmanGroup/CorMapAnalysis/tree/master/Tutorial).
 
 ### Known Issues
-- The pairwise CorMap plots should give values of either 1 (white) or -1 (black) but the colorbar gives a continuous output between 1 and -1 which is misleading. I need to sort this out so the colorbar only displays 1 or -1.
+There are no known issues. However, if you find any issues or feature requests please submit an issue or email the Garman group elspeth.garman@bioch.ox.ac.uk
 
 ### References
 [1] Brooks-Bartlett, J.C., Batters, R.A., Bury, C.S., Lowe, E.D., Ginn, H.M., Round, A. & Garman, E.F.    
