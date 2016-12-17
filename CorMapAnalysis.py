@@ -4,6 +4,8 @@ DATCMP.
 import glob
 import subprocess
 import re
+import os
+import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -81,7 +83,7 @@ class ScatterAnalysis(object):
     # attributes.
     @classmethod
     def from_1d_curves(cls, scat_curve_location, x_axis_vec=[], metric="",
-                       units=""):
+                       units="", first=-1, last=-1, smin=-1, smax=-1):
         """
         Create a ScatterAnalysis object from .
 
@@ -104,6 +106,22 @@ class ScatterAnalysis(object):
             String specifying the units used for the x-axis metric. For example
             if the x-axis metric was the 'dose', then x_units may be specified
             as "kGy".
+        first : int, optional (default=-1)
+            Index of the first point to be kept. This is mutually exclusive
+            with argument parameter 'smin'. Default value is -1. This will
+            ultimately result in the method not using this value.
+        last : int, optional (default=-1)
+            Index of the last point to be kept. This is mutually exclusive with
+            argument parameter 'smax'. Default value is -1. This will
+            ultimately result in the method not using this value.
+        smin : float, optional (Default=-1)
+            Minimal scattering angle value to be kept. This is mutually
+            exclusive with argument parameter 'first'. Default value is -1.
+            This will ultimately result in the method not using this value.
+        smax : float, optional (Default=-1)
+            Maximal scattering angle value to be kept. This is mutually
+            exclusive with argument parameter 'last'. Default value is -1.
+            This will ultimately result in the method not using this value.
 
         Returns
         -------
@@ -116,12 +134,21 @@ class ScatterAnalysis(object):
         numbers then the only input required is the location of the set of
         files:
 
-        >>>  scat_obj = ScatterAnalysis("saxs_files.00*.dat")
+        >>>  scat_obj = ScatterAnalysis.from_1d_curves("saxs_files.00*.dat")
 
         If you want to plot an x-axis that is different from the frame number,
         e.g. the dose, then we would specify something like:
 
-        >>>  scat_obj = ScatterAnalysis("saxs_files.00*.dat", np.array([10, 20, 30, 40]), "Dose", "kGy")
+        >>>  scat_obj = ScatterAnalysis.from_1d_curves("saxs_files.00*.dat", np.array([10, 20, 30, 40]), "Dose", "kGy")
+
+        If you don't want to compare the entire range of the SAXS curve (this
+        may be the case where there are sections of the 1D curves that are
+        noisy) then there is the option to crop the curves before running the
+        CorMap test to create the ScatterAnalysis object.
+        In the example below we create a ScatterAnalysis object where we crop
+        the first 99 frames and use data up to a scattering angle of 3 nm^{-1}.  
+
+        >>>  scat_obj = ScatterAnalysis.from_1d_curves("saxs_files.00*.dat", first=99, smax=3.0)
 
         Note
         ----
@@ -133,14 +160,48 @@ class ScatterAnalysis(object):
         # Go through files and extract the frame data.
         file_list = glob.glob(scat_curve_location)
         num_frames = len(file_list)
-        scattering_angles = np.loadtxt(file_list[0])[:, 0]
-        intensities = np.zeros([len(scattering_angles), num_frames])
-        for i, file in enumerate(file_list):
-            frame_data = np.loadtxt(file)
-            intensities[:, i] = frame_data[:, 1]
 
-        # Run DATCMP to get pairwise comparison information.
-        datcmp_data = ScatterAnalysis.get_datcmp_info(scat_curve_location)
+        # Decide whether the frames need to be cropped first.
+        if (first < 0) and (last < 0) and (smin < 0) and (smax < 0):
+            # Run DATCMP to get pairwise comparison information.
+            datcmp_data = ScatterAnalysis.get_datcmp_info(scat_curve_location)
+            scattering_angles = parse_saxs_dat_file(file_list[0], "scattering angle")
+            intensities = np.zeros([len(scattering_angles), num_frames])
+            num_data_points_per_curve = len(scattering_angles)
+            print("Number of data points on resulting scattering profile: {}".format(num_data_points_per_curve))
+            for i, file in enumerate(file_list):
+                intensities[:, i] = parse_saxs_dat_file(file, "intensity", num_data_points_per_curve)
+        else:
+            if last > 0 and smax > 0:
+                print("**************** WARNING ******************")
+                print("Both 'last' and 'smax' are defined but they are mutually exclusive.")
+                print("Only 'last' is being used!!!")
+            if first > 0 and smin > 0:
+                print("**************** WARNING ******************")
+                print("Both 'first' and 'smin' are defined but they are mutually exclusive.")
+                print("Only 'first' is being used!!!")
+            temp_dir_name = "Temp_dir"
+            temp_file_prefix = "temp"
+            os.mkdir(temp_dir_name)
+            crop_saxs_files(file_list, temp_dir_name, temp_file_prefix, first, last, smin, smax)
+            # Run DATCMP to get pairwise comparison information.
+            new_scat_curve_location = "{}/{}*".format(temp_dir_name,
+                                                      temp_file_prefix)
+            new_file_list = glob.glob(new_scat_curve_location)
+            print("Number of files = {}".format(len(new_file_list)))
+            datcmp_data = ScatterAnalysis.get_datcmp_info(new_scat_curve_location)
+            scattering_angles = parse_saxs_dat_file(new_file_list[0],
+                                                    "scattering angle")
+            num_data_points_per_curve = len(scattering_angles)
+            print("Number of data points on resulting scattering profile: {}".format(num_data_points_per_curve))
+            intensities = np.zeros([num_data_points_per_curve,
+                                    len(new_file_list)])
+            for i, filename in enumerate(new_file_list):
+                intensities[:, i] = parse_saxs_dat_file(filename, "intensity", num_data_points_per_curve)
+
+            # Remove temporary directory if it still exists
+            if os.path.exists(temp_dir_name):
+                shutil.rmtree(temp_dir_name)
 
         # Organise the x-axis used for the plots. Default will be the frame
         # number.
@@ -1436,8 +1497,77 @@ def run_system_command(command_string):
     return output[0]  # return the log file
 
 
+def parse_saxs_dat_file(filename, data_type, array_size=-1):
+    """Parse .dat file containing SAXS data."""
+    if array_size == -1:
+        array_size_set = False
+        array_size = 10000
+    else:
+        array_size_set = True
+
+    if data_type == "scattering angle":
+        data_column = 0
+    elif data_type == "intensity":
+        data_column = 1
+    elif data_column == "sigma":
+        data_column = 2
+        print("******WARNING*******")
+        print("Data column not specified correctly. Returning the intensity column by default.")
+        print("Please enter 'scattering angle', 'intensity' or 'sigma' as the data_type.")
+        data_column = 1
+    data_array = -1 * np.ones([array_size])
+    prog = re.compile("(?:\d+\.)?\d+[e][-\+]\d+ [-\s](?:\d+\.)?\d+[e][-\+]\d+ [-\s](?:\d+\.)?\d+[e][-\+]\d+")
+    file_obj = open(filename)
+    counter = 0
+    for line in file_obj:
+        if prog.match(line.strip()):
+            data_array[counter] = float(line.split()[data_column])
+            counter += 1
+    if not array_size_set:
+        data_array = data_array[data_array >= 0]
+    file_obj.close()
+    return data_array
+
+
+def crop_saxs_files(file_list, temp_dir_name, temp_file_prefix, first, last, smin, smax):
+    """Crop SAXS files.
+
+    Uses DATCROP from the ATSAS suite of programs to crop the SAXS Data.
+    """
+    for index, filename in enumerate(file_list):
+        if first > 0:
+            if last > 0:
+                datcrop_command = "datcrop {} --first {} --last {} -o {}/{}{}.dat".format(filename, first, last, temp_dir_name, temp_file_prefix, index)
+            elif smax > 0:
+                datcrop_command = "datcrop {} --first {} --smax {} -o {}/{}{}.dat".format(filename, first, smax, temp_dir_name, "temp", index)
+            else:
+                datcrop_command = "datcrop {} --first {} -o {}/{}{}.dat".format(filename, first, temp_dir_name, temp_file_prefix, index)
+        elif smin > 0:
+            if last > 0:
+                datcrop_command = "datcrop {} --smin {} --last {} -o {}/{}{}.dat".format(filename, smin, last, temp_dir_name, temp_file_prefix, index)
+            elif smax > 0:
+                datcrop_command = "datcrop {} --smin {} --smax {} -o {}/{}{}.dat".format(filename, smin, smax, temp_dir_name,temp_file_prefix, index)
+            else:
+                datcrop_command = "datcrop {} --smin {} -o {}/{}{}.dat".format(filename, smin, temp_dir_name, temp_file_prefix, index)
+        elif last > 0:
+            if first > 0:
+                datcrop_command = "datcrop {} --last {} --first {} -o {}/{}{}.dat".format(filename, last, first, temp_dir_name, temp_file_prefix, index)
+            elif smin > 0:
+                datcrop_command = "datcrop {} --last {} --smin {} -o {}/{}{}.dat".format(filename, last, smin, temp_dir_name, temp_file_prefix, index)
+            else:
+                datcrop_command = "datcrop {} --last {} -o {}/{}{}.dat".format(filename, last, temp_dir_name, temp_file_prefix, index)
+        elif smax > 0:
+            if first > 0:
+                datcrop_command = "datcrop {} --smax {} --first {} -o {}/{}{}.dat".format(filename, smax, first, temp_file_prefix, index)
+            elif smin > 0:
+                datcrop_command = "datcrop {} --smax {} --smin {} -o {}/{}{}.dat".format(filename, smax, smin, temp_dir_name, temp_file_prefix, index)
+            else:
+                datcrop_command = "datcrop {} --smax {} -o {}/{}{}.dat".format(filename, smax, temp_dir_name, temp_file_prefix, index)
+        run_system_command(datcrop_command)
+
+
 def on_draw(event):
-    """Auto-wraps all text objects in a figure at draw-time"""
+    """Auto-wraps all text objects in a figure at draw-time."""
     import matplotlib as mpl
     fig = event.canvas.figure
 
