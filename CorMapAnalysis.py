@@ -146,7 +146,7 @@ class ScatterAnalysis(object):
         noisy) then there is the option to crop the curves before running the
         CorMap test to create the ScatterAnalysis object.
         In the example below we create a ScatterAnalysis object where we crop
-        the first 99 frames and use data up to a scattering angle of 3 nm^{-1}.  
+        the first 99 frames and use data up to a scattering angle of 3 nm^{-1}.
 
         >>>  scat_obj = ScatterAnalysis.from_1d_curves("saxs_files.00*.dat", first=99, smax=3.0)
 
@@ -1516,7 +1516,7 @@ def parse_saxs_dat_file(filename, data_type, array_size=-1):
         print("Please enter 'scattering angle', 'intensity' or 'sigma' as the data_type.")
         data_column = 1
     data_array = -1 * np.ones([array_size])
-    prog = re.compile("(?:\d+\.)?\d+[e][-\+]\d+ [-\s](?:\d+\.)?\d+[e][-\+]\d+ [-\s](?:\d+\.)?\d+[e][-\+]\d+")
+    prog = re.compile("(?:\d+\.)?\d+[e][-\+]\d+\s+[-\s](?:\d+\.)?\d+[e][-\+]\d+\s+[-\s](?:\d+\.)?\d+[e][-\+]\d+")
     file_obj = open(filename)
     counter = 0
     for line in file_obj:
