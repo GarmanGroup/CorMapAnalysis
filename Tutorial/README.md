@@ -5,9 +5,11 @@ If you haven't already then you need to clone the repository to get all of the d
 We can import the ScatterAnalysis class and create an instance of the class from the 1D SAXS curves that are stored in the [data](https://github.com/GarmanGroup/CorMapAnalysis/tree/master/Tutorial/data) directory by entering
 ```python
 >>> from CorMapAnalysis import ScatterAnalysis
->>> scat_obj = ScatterAnalysis("path/to/mydata_00*")
+>>> scat_obj = ScatterAnalysis.from_1d_curves("path/to/mydata_00*")
 ```
-This object now offers several methods that can be used to analysis the CorMap test results. Each method has been thoroughly documented using the [Numpy style docstring format](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html) so we can generate documentation for any method we like. For example let's generate the documentation for the `find_diff_frames` method by typing
+You can use the example data that is provided in the repository which is contained in the `Tutorial/data/` directory.   
+
+The new object now offers several methods that can be used to analysis the CorMap test results. Each method has been thoroughly documented using the [Numpy style docstring format](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html) so we can generate documentation for any method we like. For example let's generate the documentation for the `find_diff_frames` method by typing
 ```python
 >>> help(scat_obj.find_diff_frames)
 ```
@@ -78,3 +80,17 @@ and
 ![Pairwise cormap 1 vs 100](../figures/pwcormap_1_100.png).
 
 Notice that the comparison between frames 1 and 10 looks like a randomised lattice, whereas the correlation map between frames 1 and 100 looks less random as there are larger patches of black and white, especially the large white patch in the top left corner.
+
+### Cropping regions of the 1D curve
+Some regions of the curves can be quite noisy and so we may not want to include them in the analysis. We can crop these regions by calling the constructor as follows
+```python
+>>>  scat_obj = ScatterAnalysis.from_1d_curves("path/to/mydata_00*", first=99, smax=3.0)
+```
+This example creates a ScatterAnalysis object where we've crop
+the first 99 frames and use data up to a scattering angle of 3 nm^{-1}.   
+
+We can see the cropped intensity curve in the first frame by entering
+```python
+scat_obj.plot_1d_intensity(1)
+```
+![cropped intesity curve](../figures/cropped_intensity_curve.png)
