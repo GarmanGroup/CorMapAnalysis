@@ -52,9 +52,9 @@ find_diff_frames(self, frame=1, P_threshold=0.01, P_type='adjP') method of CorMa
 ```
 Here we can see that this is a method that list all frames that are statistically different to some chosen frame.
 
-We can also list frames that are statistically similar. We can do this by typing
+We can also list frames that are statistically similar to a given frame. To find frames that are statistically similar to frame 1, we can type:
 ```python
->>> scat_obj.similar_frames()
+>>> scat_obj.similar_frames(frame=1)
 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 ```
 
