@@ -1516,12 +1516,13 @@ def parse_saxs_dat_file(filename, data_type, array_size=-1):
         print("Please enter 'scattering angle', 'intensity' or 'sigma' as the data_type.")
         data_column = 1
     data_array = -1 * np.ones([array_size])
-    prog = re.compile("(?:\d+\.)?\d+[e][-\+]\d+\s+[-\s](?:\d+\.)?\d+[e][-\+]\d+\s+[-\s](?:\d+\.)?\d+[e][-\+]\d+")
+    prog = re.compile("(?:\d+\.)?\d+[e][-\+]\d+")
     file_obj = open(filename)
     counter = 0
     for line in file_obj:
-        if prog.match(line.strip()):
-            data_array[counter] = float(line.split()[data_column])
+        split_line = line.strip().split()
+        if prog.match(line.strip()) and len(split_line) == 3:
+            data_array[counter] = float(split_line[data_column])
             counter += 1
     if not array_size_set:
         data_array = data_array[data_array >= 0]
