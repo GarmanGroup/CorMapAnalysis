@@ -18,7 +18,7 @@ Currently the only way to use this package is get the code from the [CorMapAnaly
 ```
 git clone https://github.com/GarmanGroup/CorMapAnalysis.git
 ```
-in the command prompt/terminal. Otherwise you can just copy and paste the Python code into a new .py file.
+in the command prompt/terminal. Otherwise you can [fork this repository](https://help.github.com/articles/fork-a-repo/) or just copy and paste the Python code into a new .py file.
 
 ### Usage
 After [installing](#installation) the *CorMapAnalysis* module, the **ScatterAnalysis** class can be imported in the usual fashion. Below is a small script that shows how straightforward it is to create the ScatterAnalysis object and generate a heatmap from the data
