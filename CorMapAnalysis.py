@@ -209,8 +209,8 @@ class ScatterAnalysis(object):
             if len(x_axis_vec) == num_frames:
                 x_axis = x_axis_vec
             else:
-                print "x_axis_vec is not the same length as the number of"
-                print "frames. Using frame numbers instead."
+                print("x_axis_vec is not the same length as the number of")
+                print("frames. Using frame numbers instead.")
                 x_axis = np.linspace(1, num_frames, num_frames)
         else:
             x_axis = np.linspace(1, num_frames, num_frames)
@@ -311,9 +311,9 @@ class ScatterAnalysis(object):
         elif P_type == "P":
             p_col = 1
         else:
-            print "********************** ERROR ***************************"
-            print "P_type '{}' Is not recognised".format(P_type)
-            print "P_type can only take the values 'adjP' (default) or 'P'."
+            print("********************** ERROR ***************************")
+            print("P_type '{}' Is not recognised".format(P_type))
+            print("P_type can only take the values 'adjP' (default) or 'P'.")
         if frame <= self.I.shape[1]:
             diff_frames = []
             for i in xrange(0, self.I.shape[1]):
@@ -328,9 +328,9 @@ class ScatterAnalysis(object):
                     diff_frames.append(i+1)
             return diff_frames
         else:
-            print "********************** ERROR ***************************"
-            print "FRAME '{}' DOES NOT EXIST".format(frame)
-            print "Use different frame numbers between 1 and {}".format(self.I.shape[1])
+            print("********************** ERROR ***************************")
+            print("FRAME '{}' DOES NOT EXIST".format(frame))
+            print("Use different frame numbers between 1 and {}".format(self.I.shape[1]))
 
     def find_first_n_diff_frames(self, n=1, frame=1, P_threshold=0.01,
                                  P_type="adjP"):
@@ -396,15 +396,15 @@ class ScatterAnalysis(object):
                 if consec_count > max_consec_count:
                     max_consec_count = consec_count
                     fr_max_count = curr_fr - max_consec_count + 1
-            print "************************ WARNING **************************"
-            print "{} consecutive frames not reached!".format(n)
-            print "The max number of consecutive frames was {}".format(max_consec_count)
-            print "The initial frame for that run was frame {}.".format(fr_max_count)
+            print("************************ WARNING **************************")
+            print("{} consecutive frames not reached!".format(n))
+            print("The max number of consecutive frames was {}".format(max_consec_count))
+            print("The initial frame for that run was frame {}.".format(fr_max_count))
         else:
-            print "********************** ERROR ***************************"
-            print "n MUST BE A POSITVE INTEGER VALUE"
-            print "User chose n = {}.".format(n)
-            print "Please choose a positve integer value for n."
+            print("********************** ERROR ***************************")
+            print("n MUST BE A POSITVE INTEGER VALUE")
+            print("User chose n = {}.".format(n))
+            print("Please choose a positve integer value for n.")
 
     def similar_frames(self, frame=1, P_threshold=0.01, P_type="adjP"):
         """
@@ -494,9 +494,9 @@ class ScatterAnalysis(object):
         elif datcmp_data_type == "adj P(>C)":
             dat_type = 2
         else:
-            print "********************** ERROR ***************************"
-            print "INVALID DATCMP DATA TYPE CHOSEN: '{}' DOES NOT EXIST".format(datcmp_data_type)
-            print "Please choose either 'C', 'P(>C)' or 'adj P(>C)'."
+            print("********************** ERROR ***************************")
+            print("INVALID DATCMP DATA TYPE CHOSEN: '{}' DOES NOT EXIST".format(datcmp_data_type))
+            print("Please choose either 'C', 'P(>C)' or 'adj P(>C)'.")
 
         if frame1 < frame2:
             datcmp_key = "{},{}".format(frame1, frame2)
@@ -506,9 +506,9 @@ class ScatterAnalysis(object):
         if datcmp_key in self.datcmp_data:
             return self.datcmp_data[datcmp_key][dat_type]
         else:
-            print "********************** ERROR ***************************"
-            print "KEY '{}' DOES NOT EXIST".format(datcmp_key)
-            print "Use different frame numbers between 1 and {}".format(self.I.shape[1])
+            print("********************** ERROR ***************************")
+            print("KEY '{}' DOES NOT EXIST".format(datcmp_key))
+            print("Use different frame numbers between 1 and {}".format(self.I.shape[1]))
 
     def calc_cormap(self):
         """
@@ -609,9 +609,9 @@ class ScatterAnalysis(object):
                     continue
                 pw_data[i, :] = np.asarray(self.datcmp_data[key])
         else:
-            print "********************** ERROR ***************************"
-            print "FRAME '{}' DOES NOT EXIST".format(frame)
-            print "Use a frame number between 1 and {}".format(self.I.shape[1])
+            print("********************** ERROR ***************************")
+            print("FRAME '{}' DOES NOT EXIST".format(frame))
+            print("Use a frame number between 1 and {}".format(self.I.shape[1]))
 
         if delete_zero_row and frame > 0:
             return np.delete(pw_data, (frame-1), axis=0)
@@ -687,10 +687,10 @@ class ScatterAnalysis(object):
                 plot_path = filename
             plt.savefig(plot_path)
         elif save and not filename:
-            print "********************** ERROR ***************************"
-            print "COULD NOT SAVE PLOT"
-            print "No filename specified. Please specify a filename if you"
-            print "would like to save the plot."
+            print("********************** ERROR ***************************")
+            print("COULD NOT SAVE PLOT")
+            print("No filename specified. Please specify a filename if you")
+            print("would like to save the plot.")
         if display:
             plt.show()
 
@@ -775,10 +775,10 @@ class ScatterAnalysis(object):
                 plot_path = filename
             plt.savefig(plot_path)
         elif save and not filename:
-            print "********************** ERROR ***************************"
-            print "COULD NOT SAVE PLOT"
-            print "No filename specified. Please specify a filename if you"
-            print "would like to save the plot."
+            print("********************** ERROR ***************************")
+            print("COULD NOT SAVE PLOT")
+            print("No filename specified. Please specify a filename if you")
+            print("would like to save the plot.")
         if display:
             plt.show()
 
@@ -846,9 +846,9 @@ class ScatterAnalysis(object):
         elif datcmp_data_type == "adj P(>C)":
             dat_type = 2
         else:
-            print "********************** ERROR ***************************"
-            print "INVALID DATCMP DATA TYPE CHOSEN: '{}' DOES NOT EXIST".format(datcmp_data_type)
-            print "Please choose either 'C', 'P(>C)' or 'adj P(>C)'."
+            print("********************** ERROR ***************************")
+            print("INVALID DATCMP DATA TYPE CHOSEN: '{}' DOES NOT EXIST".format(datcmp_data_type))
+            print("Please choose either 'C', 'P(>C)' or 'adj P(>C)'.")
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
         #                          SET PLOT PARAMS                        #
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
@@ -876,10 +876,10 @@ class ScatterAnalysis(object):
                 plot_path = filename
             plt.savefig(plot_path)
         elif save and not filename:
-            print "********************** ERROR ***************************"
-            print "COULD NOT SAVE PLOT"
-            print "No filename specified. Please specify a filename if you"
-            print "would like to save the plot."
+            print("********************** ERROR ***************************")
+            print("COULD NOT SAVE PLOT")
+            print("No filename specified. Please specify a filename if you")
+            print("would like to save the plot.")
         if display:
             plt.show()
 
@@ -1062,10 +1062,10 @@ class ScatterAnalysis(object):
                 plot_path = filename
             plt.savefig(plot_path)
         elif save and not filename:
-            print "********************** ERROR ***************************"
-            print "COULD NOT SAVE PLOT"
-            print "No filename specified. Please specify a filename if you"
-            print "would like to save the plot."
+            print("********************** ERROR ***************************")
+            print("COULD NOT SAVE PLOT")
+            print("No filename specified. Please specify a filename if you")
+            print("would like to save the plot.")
         if display:
             plt.show()
 
@@ -1249,10 +1249,10 @@ class ScatterAnalysis(object):
             plt.savefig(plot_path, bbox_extra_artists=(lgd,),
                         bbox_inches='tight')
         elif save and not filename:
-            print "********************** ERROR ***************************"
-            print "COULD NOT SAVE PLOT"
-            print "No filename specified. Please specify a filename if you"
-            print "would like to save the plot."
+            print("********************** ERROR ***************************")
+            print("COULD NOT SAVE PLOT")
+            print("No filename specified. Please specify a filename if you")
+            print("would like to save the plot.")
         if display:
             heatmap.show()
 
@@ -1377,10 +1377,10 @@ class ScatterAnalysis(object):
                 plot_path = filename
             plt.savefig(plot_path)
         elif save and not filename:
-            print "********************** ERROR ***************************"
-            print "COULD NOT SAVE PLOT"
-            print "No filename specified. Please specify a filename if you"
-            print "would like to save the plot."
+            print("********************** ERROR ***************************")
+            print("COULD NOT SAVE PLOT")
+            print("No filename specified. Please specify a filename if you")
+            print("would like to save the plot.")
         if display:
             plt.show()
 
@@ -1477,10 +1477,10 @@ class ScatterAnalysis(object):
                 plot_path = filename
             plt.savefig(plot_path)
         elif save and not filename:
-            print "********************** ERROR ***************************"
-            print "COULD NOT SAVE PLOT"
-            print "No filename specified. Please specify a filename if you"
-            print "would like to save the plot."
+            print("********************** ERROR ***************************")
+            print("COULD NOT SAVE PLOT")
+            print("No filename specified. Please specify a filename if you")
+            print("would like to save the plot.")
         if display:
             plt.show()
 
