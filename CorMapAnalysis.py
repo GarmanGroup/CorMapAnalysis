@@ -159,6 +159,8 @@ class ScatterAnalysis(object):
         """
         # Go through files and extract the frame data.
         file_list = glob.glob(scat_curve_location)
+        file_list = sorted(file_list)
+        #print(file_list)
         num_frames = len(file_list)
 
         # Decide whether the frames need to be cropped first.
@@ -254,10 +256,16 @@ class ScatterAnalysis(object):
         """
         cmd = "datcmp {}".format(scattering_curve_files)
         log = run_system_command(cmd)
+        #log = run_system_command(cmd)
+        all_lines = log.splitlines()
+        all_lines_str = []
+        for this_line in all_lines:
+            all_lines_str.append(this_line.decode("utf-8"))
+        #print(len(str(log.splitlines())))
         # define a dictionary to store the data produced from DATCMP - this
         # value will be overwritten.
         data_dict = {"1,2": 0}
-        for line in iter(log.splitlines()):
+        for i, line in enumerate(all_lines_str):
             match_obj = re.match(r'\s* \d{1,} vs', line)
             if match_obj:
                 data = line.split()
@@ -266,6 +274,7 @@ class ScatterAnalysis(object):
                 data_dict["{},{}".format(data[0], data[2])] = [int(float(data[3])),
                                                                float(data[4]),
                                                                float(data[5])]
+        #print(data_dict)
         return data_dict
 
     # ----------------------------------------------------------------------- #
@@ -316,13 +325,14 @@ class ScatterAnalysis(object):
             print("P_type can only take the values 'adjP' (default) or 'P'.")
         if frame <= self.I.shape[1]:
             diff_frames = []
-            for i in xrange(0, self.I.shape[1]):
+            for i in range(0, self.I.shape[1]):
                 if i+1 < frame:
                     key = "{},{}".format(i+1, frame)
                 elif i+1 > frame:
                     key = "{},{}".format(frame, i+1)
                 else:
                     continue
+                print(self.datcmp_data)
                 significance_val = self.datcmp_data[key][p_col]
                 if significance_val < P_threshold:
                     diff_frames.append(i+1)
@@ -441,7 +451,7 @@ class ScatterAnalysis(object):
         >>>  similar_frames = scat_obj.similar_frames(frame=10)
         """
         list_of_diff_frames = self.find_diff_frames(frame, P_threshold, P_type)
-        return [i+1 for i in xrange(0, self.I.shape[1]) if i+1 not in list_of_diff_frames]
+        return [i+1 for i in range(0, self.I.shape[1]) if i+1 not in list_of_diff_frames]
 
     def get_pw_data(self, frame1, frame2, datcmp_data_type="adj P(>C)"):
         """
@@ -600,7 +610,7 @@ class ScatterAnalysis(object):
                 pw_data[i, :] = np.asarray(values)
         elif 1 <= frame <= self.I.shape[1]:
             pw_data = np.zeros([self.I.shape[1], 3])
-            for i in xrange(0, self.I.shape[1]):
+            for i in range(0, self.I.shape[1]):
                 if i+1 < frame:
                     key = "{},{}".format(i+1, frame)
                 elif i+1 > frame:
@@ -748,9 +758,8 @@ class ScatterAnalysis(object):
         fig = plt.figure(self.PLOT_NUM)
         plt.gca().xaxis.grid(False)
         plt.gca().yaxis.grid(False)
-        cormap = plt.imshow(self.calc_pwcormap(frame1=fr1, frame2=fr2),
-                            cmap=colour_scheme,
-                            extent=[min_q, max_q, min_q, max_q])
+        cormap = plt.imshow(self.calc_pwcormap(frame1=fr1, frame2=fr2),cmap=colour_scheme,extent=[min_q, max_q, max_q, min_q])
+        #cormap = plt.imshow(self.calc_pwcormap(frame1=fr1, frame2=fr2),cmap=colour_scheme)
         plt.xlabel(r'Scattering Vector, q (nm$^{-1}$)',
                    fontdict=self.PLOT_LABEL)
         plt.ylabel(r'Scattering Vector, q (nm$^{-1}$)',
@@ -1336,7 +1345,7 @@ class ScatterAnalysis(object):
             intensity = np.log(intensity)
         plt.figure(self.PLOT_NUM)
         if len(intensity.shape) == 2:
-            for i in xrange(0, intensity.shape[1]):
+            for i in range(0, intensity.shape[1]):
                 if self.x_units:
                     plt.plot(reciprocal_resolution, intensity[:, i], 'o',
                              markersize=markersize, markeredgecolor='#ffffff',
@@ -1456,7 +1465,7 @@ class ScatterAnalysis(object):
         num_frames = self.I.shape[1]
         diff_frames_list = np.zeros(num_frames)
         frames = np.linspace(1, num_frames, num_frames)
-        for i in xrange(0, num_frames):
+        for i in range(0, num_frames):
             frame = i+1
             diff_frames_list[i] = self.find_first_n_diff_frames(n=n, frame=frame, P_threshold=P_threshold, P_type=P_type)
 
@@ -1608,9 +1617,9 @@ def autowrap_text(textobj, renderer):
 
     # Use either the left or right distance depending on the horiz alignment.
     alignment = textobj.get_horizontalalignment()
-    if alignment is 'left':
+    if alignment == 'left':
         new_width = right_space
-    elif alignment is 'right':
+    elif alignment == 'right':
         new_width = left_space
     else:
         new_width = 2 * min(left_space, right_space)
